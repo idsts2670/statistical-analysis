@@ -1,63 +1,70 @@
-# (1) パッケージをインストールする（初回のみ）
+# install packages (initial attempt only)
 install.packages("broom")
 
-# (2) ライブラリの読み出し
-library("tidyverse")
-library("broom")
+# library
+library('tidyverse')
+library('broom')
 
-# (3) データの読み込み
-email_data <- read_csv("http://www.minethatdata.com/Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv")
+# read the data
+email_data <- read_csv('Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv')
 
-# (4) 女性向けメールが配信されたデータを削除したデータを作成
+# create the dataset without the data with e-mail sent to women
 male_df <- email_data %>%
-  filter(segment != "Womens E-Mail") %>% # 女性向けメールが配信されたデータを削除
-  mutate(treatment = ifelse(segment == "Mens E-Mail", 1, 0)) # 介入を表すtreatment変数を追加
+  filter(segment != "Womens E-Mail") %>%
+  # add treatement columns
+  mutate(treatment = ifelse(segment == "Mens E-Mail", 1, 0))
 
-# (5) セレクションバイアスのあるデータを作成
-## seedを固定
+# create the data with selection_biased
+## set seed
 set.seed(1)
 
-## 条件に反応するサンプルの量を半分にする
+## make half in some conditions
 obs_rate_c <- 0.5
 obs_rate_t <- 0.5
 
-## バイアスのあるデータを作成
+## make biased data
 biased_data <- male_df %>%
-  mutate(obs_rate_c =
-           ifelse( (history > 300) | (recency < 6) |
-                     (channel == "Multichannel"), obs_rate_c, 1),
-         obs_rate_t =
-           ifelse( (history > 300) | (recency < 6) |
-                     (channel == "Multichannel"), 1, obs_rate_t),
-         random_number = runif(n = NROW(male_df))) %>%
-  filter( (treatment == 0 & random_number < obs_rate_c ) |
-            (treatment == 1 & random_number < obs_rate_t) )
+  mutate(
+    # make half in `obs_rate_c` column if filters matched
+    obs_rate_c =
+      ifelse((history > 300) | (recency < 6) | (channel == "Multichannel"), obs_rate_c, 1), # nolint
+    # make half in `obs_rate_t` column if filters matched
+    obs_rate_t =
+      ifelse((history > 300) | (recency < 6) | (channel == "Multichannel"), 1, obs_rate_t), # nolint
+    # generate random number in `random_number` column
+    random_number =
+      runif(n = NROW(male_df))) %>%
+  filter((treatment == 0 & random_number < obs_rate_c) |
+      (treatment == 1 & random_number < obs_rate_t))
 
-names(data)
+names(biased_data)
 
-# (6) バイアスのあるデータでの回帰分析
-## 回帰分析の実行
+# regression with biased_data
+## exectute the regression analysis
 biased_reg <- lm(data = biased_data, formula = spend ~ treatment + history)
-
-## 分析結果のレポート
+# summary report
 summary(biased_reg)
 
-## 推定されたパラメーターの取り出し
+## change the lm's output to dataframe
 biased_reg_coef <- tidy(biased_reg)
 
-# (7) RCTデータでの回帰分析とバイアスのあるデータでの回帰分析の比較
-## RCTデータでの単回帰
+# compare regression with RCT data and reg with biased_data
+# reg with RCT data
 rct_reg <- lm(data = male_df, formula = spend ~ treatment)
-rct_reg_coef <- tidy(rct_reg)
+rct_reg_coef <- summary(rct_reg) %>% tidy()
 
-## バイアスのあるデータでの単回帰
+# reg with biased data
 nonrct_reg <- lm(data = biased_data, formula = spend ~ treatment)
-nonrct_reg_coef <- tidy(nonrct_reg)
+nonrct_reg_coef <- summary(nonrct_reg) %>% tidy()
 
-## バイアスのあるデータでの重回帰
-nonrct_mreg <- lm(data = biased_data,
+# print the two dataframes
+rct_reg_coef;nonrct_reg_coef
+
+# add covariance to reduce bias
+nonrct_mreg <- lm(data = biased_data, 
                   formula = spend ~ treatment + recency + channel + history)
 nonrct_mreg_coef <- tidy(nonrct_mreg)
+
 
 # (8) OVBの確認
 ## (a) history抜きの回帰分析とパラメーターの取り出し
