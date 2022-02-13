@@ -120,7 +120,7 @@ models <- formula_vec %>%
 df_models <- models %>%
   # add results of regression in model columns
   mutate(model = map(.x = formula, .f = lm, data = biased_data)) %>%
-  # 
+  # add tidy results of regression in lm_result 
   mutate(lm_result = map(.x = model, .f = tidy))
 
 #　data shaping
