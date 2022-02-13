@@ -2,11 +2,11 @@
 install.packages("broom")
 
 # library
-library('tidyverse')
-library('broom')
+library("tidyverse")
+library("broom")
 
 # read the data
-email_data <- read_csv('Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv')
+email_data <- read_csv("Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv")
 
 # create the dataset without the data with e-mail sent to women
 male_df <- email_data %>%
@@ -61,81 +61,86 @@ nonrct_reg_coef <- summary(nonrct_reg) %>% tidy()
 rct_reg_coef;nonrct_reg_coef
 
 # add covariance to reduce bias
-nonrct_mreg <- lm(data = biased_data, 
+nonrct_mreg <- lm(data = biased_data,
                   formula = spend ~ treatment + recency + channel + history)
 nonrct_mreg_coef <- tidy(nonrct_mreg)
 
-
-# (8) OVBの確認
-## (a) history抜きの回帰分析とパラメーターの取り出し
+# verify the OVB part1
+## (a) reg with biased data and get the parameter without `history`
 short_coef <- biased_data %>%
-  lm(data = .,
-     formula = spend ~ treatment + recency + channel) %>%
+  # model A
+  lm(data = ., formula = spend ~ treatment + recency + channel) %>%
   tidy()
 
-## aの結果から介入効果に関するパラメーターのみを取り出す
+## get the parameter of intervention effect from the (a) outcome
 alpha_1 <- short_coef %>%
   filter(term == "treatment") %>%
   pull(estimate)
 
-## (b) historyを追加した回帰分析とパラメーターの取り出し
+## (b) reg with biased data and get the parameter with `history`
 long_coef <- biased_data %>%
-  lm(data = .,
-     formula = spend ~ treatment + recency + channel + history) %>%
+  # model B
+  lm(data = ., formula = spend ~ treatment + recency + channel + history) %>% 
   tidy()
 
-## bの結果から介入とhistoryに関するパラメーターを取り出す
+## get the parameter of intervention effect and the parameter of `history` from the (b) outcome
 beta_1 <- long_coef %>% filter(term == "treatment") %>% pull(estimate)
 beta_2 <- long_coef %>% filter(term == "history") %>% pull(estimate)
 
-## (c) 脱落した変数と介入変数での回帰分析
+## (c) regress OVB(=`history`) by intervention effect(=`treatment`) and other parameters
 omitted_coef <- biased_data %>%
-  lm(data = ., formula = history ~ treatment + channel + recency) %>%
+  # model C
+  lm(data = ., formula = history ~ treatment + recency + channel) %>%
   tidy()
-## cの結果から介入変数に関するパラメーターを取り出す
+
+## get the parameter of OVB and intervention effect from the (c) outcome
 gamma_1 <- omitted_coef %>% filter(term == "treatment") %>% pull(estimate)
 
-## OVBの確認
-beta_2*gamma_1
+## check OVB
+beta_2 * gamma_1
 alpha_1 - beta_1
 
-# (9) OVBの確認(broomを利用した場合)
-## broomの読み出し
+# verify the OVB part2 (using broom)
+## library
 library(broom)
 
-## モデル式のベクトルを用意
-formula_vec <- c(spend ~ treatment + recency + channel, # モデルA
-               spend ~ treatment + recency + channel + history, # モデルB
-               history ~ treatment + channel + recency) # モデルC
+## create the vector by model formulas
+formula_vec <- c(spend ~ treatment + recency + channel, # model A
+                spend ~ treatment + recency + channel + history, # model B
+                history ~ treatment + recency + channel) # model C
 
-## formulaに名前を付ける
-names(formula_vec) <- paste("reg", LETTERS[1:3], sep ="_")
+# give the name to the formula
+names(formula_vec) <- paste("reg", LETTERS[1:3], sep = "_")
 
-## モデル式のデータフレーム化
-models = formula_vec %>%
+## create the dataframe from vectors
+models <- formula_vec %>%
   enframe(name = "model_index", value = "formula")
 
-## まとめて回帰分析を実行
+## regression all by using map function
 df_models <- models %>%
+  # add results of regression in model columns
   mutate(model = map(.x = formula, .f = lm, data = biased_data)) %>%
+  # 
   mutate(lm_result = map(.x = model, .f = tidy))
 
-## モデルの結果を整形
+#　data shaping
 df_results <- df_models %>%
+  # change formula column as character
   mutate(formula = as.character(formula)) %>%
   select(formula, model_index, lm_result) %>%
   unnest(cols = lm_result)
 
-## モデルA,B,Cでのtreatmentのパラメータを抜き出す
+## extract the `treatment` parameters from model A,B,C
 treatment_coef <- df_results %>%
   filter(term == "treatment") %>%
   pull(estimate)
 
-## モデルBからhistoryのパラメータを抜き出す
+## get `history` parameter from model B
 history_coef <- df_results %>%
-  filter(model_index == "reg_B",
-         term == "history") %>%
+  filter(model_index == "reg_B", term == "history") %>%
   pull(estimate)
+
+
 
 ## OVBの確認
 OVB <- history_coef*treatment_coef[3]
