@@ -40,7 +40,7 @@ biased_data <- male_df %>%
 names(biased_data)
 
 # regression with biased_data
-## exectute the regression analysis
+## execute the regression analysis
 biased_reg <- lm(data = biased_data, formula = spend ~ treatment + history)
 # summary report
 summary(biased_reg)
@@ -63,6 +63,7 @@ rct_reg_coef;nonrct_reg_coef
 # add covariance to reduce bias
 nonrct_mreg <- lm(data = biased_data,
                   formula = spend ~ treatment + recency + channel + history)
+# get the output of regression including estimate, std.error, statistic, p.value
 nonrct_mreg_coef <- tidy(nonrct_mreg)
 
 # verify the OVB part1
@@ -118,9 +119,9 @@ models <- formula_vec %>%
 
 ## regression all by using map function
 df_models <- models %>%
-  # add results of regression in model columns
+  # add results of regression in model column
   mutate(model = map(.x = formula, .f = lm, data = biased_data)) %>%
-  # add tidy results of regression in lm_result 
+  # add output including estimate, std.error, statistic, p.value in lm_result column
   mutate(lm_result = map(.x = model, .f = tidy))
 
 #　data shaping
@@ -140,13 +141,11 @@ history_coef <- df_results %>%
   filter(model_index == "reg_B", term == "history") %>%
   pull(estimate)
 
-
-
-## OVBの確認
-OVB <- history_coef*treatment_coef[3]
+## check OVB
+OVB <- history_coef * treatmnet_coef[3]
 coef_gap <- treatment_coef[1] - treatment_coef[2]
-OVB # beta_2*gamma_1
-coef_gap # alpha_1 - beta_1
+
+
 
 # (10) 入れてはいけない変数を入れてみる
 #visitとtreatmentとの相関
