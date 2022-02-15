@@ -217,6 +217,9 @@ formula_x_covariate <- "SVY + HSVISIT + AGE + STRATA1 + STRATA2 + STRATA3 + STRA
 formula_y <- c("TOTSCYRS","INSCHL","PRSCH_C","USNGSCH","PRSCHA_1","FINISH6","FINISH7","FINISH8","REPT6","REPT","NREPT",
                "MARRIED","HASCHILD","HOURSUM","WORKING3")
 
+## create the regression formula without covariances
+base_reg_formula <- paste(formula_y, "~", `)
+
 # 用語紹介
 
 ・**回帰分析**
