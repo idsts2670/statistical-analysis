@@ -207,18 +207,26 @@ library(tidyverse)
 data(vouchers)
 vouchers
 ```
+
 ### Prepare for the regression
 ```{r}
 # set character strings for regression
 formula_x_base <- "VOUCH0"
 
-formula_x_covariate <- "SVY + HSVISIT + AGE + STRATA1 + STRATA2 + STRATA3 + STRATA4 + STRATA5 + STRATA6 + STRATAMS + D1993 + D1995 + D1997 + DMONTH1 + DMONTH2 + DMONTH3 + DMONTH4 + DMONTH5 + DMONTH6 + DMONTH7 + DMONTH8 + DMONTH9 + DMONTH10 + DMONTH11 + DMONTH12 + SEX2"
+formula_x_covariate <- "SVY + HSVISIT + AGE + STRATA1 + STRATA2
+  + STRATA3 + STRATA4 + STRATA5 + STRATA6 + STRATAMS
+  + D1993 + D1995 + D1997 + DMONTH1 + DMONTH2 + DMONTH3
+  + DMONTH4 + DMONTH5 + DMONTH6 + DMONTH7 + DMONTH8 + DMONTH9
+  + DMONTH10 + DMONTH11 + DMONTH12 + SEX2"
 
-formula_y <- c("TOTSCYRS","INSCHL","PRSCH_C","USNGSCH","PRSCHA_1","FINISH6","FINISH7","FINISH8","REPT6","REPT","NREPT",
-               "MARRIED","HASCHILD","HOURSUM","WORKING3")
+formula_y <- c("TOTSCYRS", "INSCHL", "PRSCH_C", "USNGSCH",
+  "PRSCHA_1", "FINISH6", "FINISH7", "FINISH8", "REPT6", "REPT", "NREPT",
+  "MARRIED", "HASCHILD", "HOURSUM", "WORKING3")
 
 ## create the regression formula without covariances
 base_reg_formula <- paste(formula_y, "~", `)
+```
+
 
 # 用語紹介
 

@@ -1,13 +1,3 @@
-# install packages (initial attempt only)
-install.packages("broom")
-
-# library
-library("tidyverse")
-library("broom")
-
-# read the data
-email_data <- read_csv("Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv")
-
 # create the dataset without the data with e-mail sent to women
 male_df <- email_data %>%
   filter(segment != "Womens E-Mail") %>%
@@ -38,15 +28,6 @@ biased_data <- male_df %>%
       (treatment == 1 & random_number < obs_rate_t))
 
 names(biased_data)
-
-# regression with biased_data
-## execute the regression analysis
-biased_reg <- lm(data = biased_data, formula = spend ~ treatment + history)
-# summary report
-summary(biased_reg)
-
-## change the lm's output to dataframe
-biased_reg_coef <- tidy(biased_reg)
 
 # compare regression with RCT data and reg with biased_data
 # reg with RCT data
@@ -84,11 +65,11 @@ long_coef <- biased_data %>%
   lm(data = ., formula = spend ~ treatment + recency + channel + history) %>% 
   tidy()
 
-## get the parameter of intervention effect and the parameter of `history` from the (b) outcome
+## get the parameter of intervention effect and the parameter of `history` from the (b) outcome # nolint
 beta_1 <- long_coef %>% filter(term == "treatment") %>% pull(estimate)
 beta_2 <- long_coef %>% filter(term == "history") %>% pull(estimate)
 
-## (c) regress OVB(=`history`) by intervention effect(=`treatment`) and other parameters
+## (c) regress OVB(=`history`) by intervention effect(=`treatment`) and other parameters # nolint
 omitted_coef <- biased_data %>%
   # model C
   lm(data = ., formula = history ~ treatment + recency + channel) %>%
@@ -121,7 +102,7 @@ models <- formula_vec %>%
 df_models <- models %>%
   # add results of regression in model column
   mutate(model = map(.x = formula, .f = lm, data = biased_data)) %>%
-  # add output including estimate, std.error, statistic, p.value in lm_result column
+  # add output including estimate, std.error, statistic, p.value in `lm_result` column # nolint
   mutate(lm_result = map(.x = model, .f = tidy))
 
 #　data shaping
@@ -142,18 +123,18 @@ history_coef <- df_results %>%
   pull(estimate)
 
 ## check OVB
-OVB <- history_coef * treatmnet_coef[3]
+OVB <- history_coef * treatment_coef[3]
 coef_gap <- treatment_coef[1] - treatment_coef[2]
 
+# post treatment bias
+# Post treatment bias(処置後変数バイアス)とは介入によって影響を受けた変数を分析に入れることによって起こるバイアスのこと(visit = サイトへの来訪) # nolint
+# この問題を避けるためには介入よりも後のタイミングで値が決まるような変数を分析から除外する必要がある # nolint
+# if you include some parameters which may be affected by intervention effect (parameters correlated with both Z, Y), the regression's outcome can be distorted # nolint
 
-
-# (10) 入れてはいけない変数を入れてみる
-#visitとtreatmentとの相関
+## correlation between `visit` and {:X}, {:Z}
 cor_visit_treatment <- lm(data = biased_data,
-                          formula = treatment ~ visit + channel + recency + history) %>%
-  tidy()
+  formula = treatment ~ visit + channel + recency + history) %>% tidy()
 
-# visitを入れた回帰分析を実行
+# regression with `visit` parameter inclusive
 bad_control_reg <- lm(data = biased_data,
-                      formula = spend ~ treatment + channel + recency + history + visit) %>%
-  tidy()
+  formula = spend ~ treatment + channel + recency + history + visit) %>% tidy()
