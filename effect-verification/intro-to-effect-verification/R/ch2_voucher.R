@@ -28,10 +28,10 @@ names(covariate_reg_formula) <-
   paste(formula_y, "covariate", sep = "_")
 
 ### モデル式のベクトルを作成
-table3_fomula <- c(base_reg_formula, covariate_reg_formula)
+table3_formula <- c(base_reg_formula, covariate_reg_formula)
 
 ### モデル式のベクトルをデータフレーム化する
-models <- table3_fomula %>%
+models <- table3_formula %>%
   enframe(name = "model_index", value = "formula")
 
 ## 回帰分析を実行
