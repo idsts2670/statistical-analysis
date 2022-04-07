@@ -1,4 +1,5 @@
-# create the dataset without the data with e-mail sent to women
+
+# create the dataset without the data with which e-mail was sent to women
 male_df <- email_data %>%
   filter(segment != "Womens E-Mail") %>%
   # add treatement columns
@@ -27,7 +28,9 @@ biased_data <- male_df %>%
   filter((treatment == 0 & random_number < obs_rate_c) |
       (treatment == 1 & random_number < obs_rate_t))
 
+# columns names
 names(biased_data)
+
 
 # compare regression with RCT data and reg with biased_data
 # reg with RCT data
@@ -41,14 +44,17 @@ nonrct_reg_coef <- summary(nonrct_reg) %>% tidy()
 # print the two dataframes
 rct_reg_coef;nonrct_reg_coef
 
-# add covariance to reduce bias
+# add covariance to reduce bias in the regression
 nonrct_mreg <- lm(data = biased_data,
                   formula = spend ~ treatment + recency + channel + history)
-# get the output of regression including estimate, std.error, statistic, p.value
+# output of regression including estimate, std.error, statistic, p.value
 nonrct_mreg_coef <- tidy(nonrct_mreg)
 
+
+# OVB
+
 # verify the OVB part1
-## (a) reg with biased data and get the parameter without `history`
+## (a) regression with biased data and get the parameters without `history`
 short_coef <- biased_data %>%
   # model A
   lm(data = ., formula = spend ~ treatment + recency + channel) %>%
@@ -59,15 +65,15 @@ alpha_1 <- short_coef %>%
   filter(term == "treatment") %>%
   pull(estimate)
 
-## (b) reg with biased data and get the parameter with `history`
+## (b) regression with biased data and get the parameters with `history`
 long_coef <- biased_data %>%
   # model B
-  lm(data = ., formula = spend ~ treatment + recency + channel + history) %>% 
+  lm(data = ., formula = spend ~ treatment + recency + channel + history) %>%
   tidy()
 
 ## get the parameter of intervention effect and the parameter of `history` from the (b) outcome # nolint
 beta_1 <- long_coef %>% filter(term == "treatment") %>% pull(estimate)
-beta_2 <- long_coef %>% filter(term == "history") %>% pull(estimate)
+beta_4 <- long_coef %>% filter(term == "history") %>% pull(estimate)
 
 ## (c) regress OVB(=`history`) by intervention effect(=`treatment`) and other parameters # nolint
 omitted_coef <- biased_data %>%
@@ -79,8 +85,9 @@ omitted_coef <- biased_data %>%
 gamma_1 <- omitted_coef %>% filter(term == "treatment") %>% pull(estimate)
 
 ## check OVB
-beta_2 * gamma_1
+gamma_1 * beta_4
 alpha_1 - beta_1
+
 
 # verify the OVB part2 (using broom)
 ## library
@@ -91,7 +98,7 @@ formula_vec <- c(spend ~ treatment + recency + channel, # model A
                 spend ~ treatment + recency + channel + history, # model B
                 history ~ treatment + recency + channel) # model C
 
-# give the name to the formula
+# give names to the formulas
 names(formula_vec) <- paste("reg", LETTERS[1:3], sep = "_")
 
 ## create the dataframe from vectors
@@ -110,20 +117,23 @@ df_results <- df_models %>%
   # change formula column as character
   mutate(formula = as.character(formula)) %>%
   select(formula, model_index, lm_result) %>%
+  # unnest three columns
   unnest(cols = lm_result)
 
-## extract the `treatment` parameters from model A,B,C
+## extract the `treatment` parameters from model A,B,C (-> α_1, β_1, γ_1)
 treatment_coef <- df_results %>%
   filter(term == "treatment") %>%
   pull(estimate)
 
-## get `history` parameter from model B
+## get `history` parameter from model B (-> β_4)
 history_coef <- df_results %>%
   filter(model_index == "reg_B", term == "history") %>%
   pull(estimate)
 
 ## check OVB
+### β_4 * γ_1
 OVB <- history_coef * treatment_coef[3]
+### α_a - β_1
 coef_gap <- treatment_coef[1] - treatment_coef[2]
 
 # post treatment bias
