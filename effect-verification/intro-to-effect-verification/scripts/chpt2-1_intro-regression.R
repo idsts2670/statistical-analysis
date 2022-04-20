@@ -3,7 +3,7 @@ library("tidyverse")
 library("broom")
 
 # set working directory
-setwd('~/Documents/statistical-analysis/effect-verification/intro-to-effect-verification')
+setwd("~/Documents/statistical-analysis/effect-verification/intro-to-effect-verification")
 
 # read the data
 email_data <- read_csv("data/Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv")
