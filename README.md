@@ -1,2 +1,2 @@
 # statistical-analysis
-stuff basically related to stats
+anything related to stats
