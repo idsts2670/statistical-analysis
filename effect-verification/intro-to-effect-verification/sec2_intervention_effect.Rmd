@@ -1,0 +1,296 @@
+---
+title: "Intervention_effect"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Take over elements from selection_biased_RCT note
+## Call library
+```{r message = FALSE}
+# install packages (initial attempt only)
+install.packages("broom")
+
+# library
+library("tidyverse")
+library("broom")
+
+# read the data
+email_data <- read_csv("Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv")
+```
+## create the dataset without the data with e-mail sent to women
+```{r}
+male_df <- email_data %>%
+  filter(segment != "Womens E-Mail") %>%
+  # add treatement columns
+  mutate(treatment = ifelse(segment == "Mens E-Mail", 1, 0))
+
+# create the data with selection_biased
+## set seed
+set.seed(1)
+
+## make half in some conditions
+obs_rate_c <- 0.5
+obs_rate_t <- 0.5
+
+## make biased data
+biased_data <- male_df %>%
+  mutate(
+    # make half in `obs_rate_c` column if filters matched
+    obs_rate_c =
+      ifelse((history > 300) | (recency < 6) | (channel == "Multichannel"), obs_rate_c, 1), # nolint
+    # make half in `obs_rate_t` column if filters matched
+    obs_rate_t =
+      ifelse((history > 300) | (recency < 6) | (channel == "Multichannel"), 1, obs_rate_t), # nolint
+    # generate random number in `random_number` column
+    random_number =
+      runif(n = NROW(male_df))) %>%
+  filter((treatment == 0 & random_number < obs_rate_c) |
+      (treatment == 1 & random_number < obs_rate_t))
+
+names(biased_data)
+```
+
+# Analysis of mail-marketing with regression
+## regression with biased_data
+```{r, cache = True}
+## execute the regression analysis
+biased_reg <- lm(data = biased_data, formula = spend ~ treatment + history)
+# summary report
+summary(biased_reg)
+
+## change the lm's output to dataframe
+biased_reg_coef <- tidy(biased_reg)
+```
+
+# Bias in regression analysis
+## compare regression with RCT data and reg with biased_data
+```{r, cache = True}
+# reg with RCT data
+rct_reg <- lm(data = male_df, formula = spend ~ treatment)
+rct_reg_coef <- summary(rct_reg) %>% tidy()
+
+# reg with biased data
+nonrct_reg <- lm(data = biased_data, formula = spend ~ treatment)
+nonrct_reg_coef <- summary(nonrct_reg) %>% tidy()
+```
+### print the two dataframes
+```{r cache = TRUE}
+rct_reg_coef;nonrct_reg_coef
+```
+## add covariance to reduce bias
+```{r cache = TRUE}
+nonrct_mreg <- lm(data = biased_data,
+                  formula = spend ~ treatment + recency + channel + history)
+# get the output of regression including estimate, std.error, statistic, p.value
+nonrct_mreg_coef <- tidy(nonrct_mreg)
+```
+
+## verify the OVB part1
+### (a) reg with biased data and get the parameter without `history`
+```{r}
+short_coef <- biased_data %>%
+  # model A
+  lm(data = ., formula = spend ~ treatment + recency + channel) %>%
+  tidy()
+
+## get the parameter of intervention effect from the (a) outcome
+alpha_1 <- short_coef %>%
+  filter(term == "treatment") %>%
+  pull(estimate)
+```
+
+### (b) reg with biased data and get the parameter with `history`
+```{r}
+long_coef <- biased_data %>%
+  # model B
+  lm(data = ., formula = spend ~ treatment + recency + channel + history) %>% 
+  tidy()
+
+## get the parameter of intervention effect and the parameter of `history` from the (b) outcome
+beta_1 <- long_coef %>% filter(term == "treatment") %>% pull(estimate)
+beta_2 <- long_coef %>% filter(term == "history") %>% pull(estimate)
+```
+
+### (c) regress OVB(=`history`) by intervention effect(=`treatment`) and other parameters
+```{r}
+omitted_coef <- biased_data %>%
+  # model C
+  lm(data = ., formula = history ~ treatment + recency + channel) %>%
+  tidy()
+
+## get the parameter of OVB and intervention effect from the (c) outcome
+gamma_1 <- omitted_coef %>% filter(term == "treatment") %>% pull(estimate)
+```
+
+### check OVB
+```{r}
+beta_2 * gamma_1
+alpha_1 - beta_1
+```
+
+## verify the OVB part2 (using broom)
+### library
+```{r}
+library(broom)
+
+## create the vector by model formulas
+
+formula_vec <- c(spend ~ treatment + recency + channel, # model A
+                spend ~ treatment + recency + channel + history, # model B
+                history ~ treatment + recency + channel) # model C
+
+## give the name to the formula
+names(formula_vec) <- paste("reg", LETTERS[1:3], sep = "_")
+
+## create the dataframe from vectors
+models <- formula_vec %>%
+  enframe(name = "model_index", value = "formula")
+
+## regression all by using map function
+df_models <- models %>%
+  # add results of regression in model column
+  mutate(model = map(.x = formula, .f = lm, data = biased_data)) %>%
+  # get 3 parameter's outputs stored in model column and create the dataframe by tidy in lm_result column
+  mutate(lm_result = map(.x = model, .f = tidy))
+
+##　data shaping
+df_results <- df_models %>%
+  # change formula column as character
+  mutate(formula = as.character(formula)) %>%
+  select(formula, model_index, lm_result) %>%
+  unnest(cols = lm_result)
+
+## extract the `treatment` parameters from model A,B,C
+treatment_coef <- df_results %>%
+  filter(term == "treatment") %>%
+  pull(estimate)
+
+## get `history` parameter from model B
+history_coef <- df_results %>%
+  filter(model_index == "reg_B", term == "history") %>%
+  pull(estimate)
+```
+### check OVB
+```{r}
+OVB <- history_coef * treatmnet_coef[3]
+coef_gap <- treatment_coef[1] - treatment_coef[2]
+```
+
+## post treatment bias
+Post treatment bias(処置後変数バイアス)とは介入によって影響を受けた変数を分析に入れることによって起こるバイアスのこと(visit = サイトへの来訪)。この問題を避けるためには介入よりも後のタイミングで値が決まるような変数を分析から除外する必要がある
+```{r}
+# if you include some parameters which may be affected by intervention effect (parameters correlated with both Z, Y), the regression's outcome can be distorted
+
+# correlation between `visit` and {:X}, {:Z}
+cor_visit_treatment <- lm(data = biased_data, formula = treatment ~ visit + channel + recency + history) %>%
+    tidy()
+
+# regression with `visit` parameter inclusive
+bad_control_reg <- lm(data = biased_data, formula = spend ~ treatment + channel + recency + history + visit) %>%
+    tidy()
+```
+
+# Exploratory effect verification
+## Execute the regression
+### library and data
+```{r message = FALSE}
+# install.packages("remote")
+# get the experimentdatar from Github
+# コロンビアで行われた私立学校の学費の割引に関する実験分析の研究のデータ
+# remotes::install_github("itamarcaspi/experimentdatar")
+library(experimentdatar)
+library(broom)
+library(tidyverse)
+data(vouchers)
+vouchers
+```
+
+### Prepare for the regression
+```{r}
+# set character strings for regression
+formula_x_base <- "VOUCH0"
+
+formula_x_covariate <- "SVY + HSVISIT + AGE + STRATA1 + STRATA2
+  + STRATA3 + STRATA4 + STRATA5 + STRATA6 + STRATAMS
+  + D1993 + D1995 + D1997 + DMONTH1 + DMONTH2 + DMONTH3
+  + DMONTH4 + DMONTH5 + DMONTH6 + DMONTH7 + DMONTH8 + DMONTH9
+  + DMONTH10 + DMONTH11 + DMONTH12 + SEX2"
+
+formula_y <- c("TOTSCYRS", "INSCHL", "PRSCH_C", "USNGSCH",
+  "PRSCHA_1", "FINISH6", "FINISH7", "FINISH8", "REPT6", "REPT", "NREPT",
+  "MARRIED", "HASCHILD", "HOURSUM", "WORKING3")
+
+## create the regression formula without covariances
+base_reg_formula <- paste(formula_y, "~", `)
+```
+
+
+# 用語紹介
+
+・**回帰分析**
+
+OLS(最小二乗法)をもとに得られた誤差が最小化されたパラメーターの推定結果をもとにXの値が決まったときにYの値を予測する分析手法。
+
+母集団上のYとYの条件付き期待値と回帰式の関係性：
+$$
+    \begin{align*}
+    Y = E[Y|X] + µ = β_{0} + β_{1}X + µ
+    \end{align*}
+$$
+
+上記の関係式よりわかる通り、手元のサンプルデータで回帰分析を行うことは、このような関係を満たす $β0, β1$ の値を 手元のデータから推定して $\widehat{β_{0}} $ や $\widehat{β_{1}}$ として得るということである
+
+*よって,回帰分析では単にYに対する近似値を得ているだけでなく、Yの条件付き期待値 $ E[Y|X]$に対する推定値を得ているということになる*
+
+
+
+・**回帰分析による効果測定**
+
+介入効果は期待値の差 $E[Y|X,Z = 1] - E[Y|X,Z =0]$ にある. 
+つまり
+
+$$
+    \begin{align*}
+    &E[Y|X,Z = 1] = β_{0} + β_{1}X + β_{2}X^2 + β_{3}1\\
+    &E[Y|X,Z = 0] = β_{0} + β_{1}X + β_{2}X^2 + β_{3}0\\
+    \\
+    E[Y|X,Z = 1] - E[Y|X,Z = 0]\\
+    &= (β_{0} + β_{1}X + β_{2}X^2 + β_{3}1) - (β_{0} + β_{1}X + β_{2}X^2 + β_{3}0)\\
+    &= β_{3}
+    \end{align*}
+$$
+
+・**脱落変数バイアス(OVB)**
+
+2つの回帰分析モデルを仮定したとき、$ X_{omit,i} $ のような本来必要だがモデルから抜け落ちている変数を**脱落変数**という
+$$
+    \begin{align*}
+    & Y_{i} = α_{0} + α_{1}Z_{i} + u_{i} (モデルA)\\
+    & Y_{i} = β_{0} + β_{1}Z_{i} + β_{2}X_{omit,i} + e_{i} (モデルB)\\
+    \end{align*}
+$$
+
+つまり
+
+$$
+    \begin{align*}
+    & u_{i} = β_{2}X_{omit,i} + e_{i}\\
+    & α_{1} = β_{1} + γ_{1}β_{2}
+    \end{align*}
+$$
+
+$ α_{1} = β_{1} + γ_{1}β_{2} $はモデルAを使って効果測定をした場合、得られる効果の推定結果は本来の効果にOVBを加えたものになる
+
+$ β_{2} $はモデルBにおいて推定される$ X_{omit, i} $ と $ Y_{i} $の相関に当たるもの。$ γ_{1} $は以下の式のように $ X_{omit, i} $に対して、$ Z_{i} $を回帰させたときに得られる回帰係数であり、$ Z_{i} $ と$ X_{omit,i} $の相関と考えられる
+
+$$
+    \begin{align*}
+    & X_{omit,i} = γ_{i}Z_{i} + e_{i}
+    \end{align*}
+$$
+
+・**Sensitivity Analysis**
+重要だと分析者が認識している今日変量以外の共変量をモデルから抜くことで、効果が大きく変化するかを見るためのもの
