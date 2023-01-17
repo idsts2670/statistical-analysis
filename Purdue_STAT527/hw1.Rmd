@@ -1,0 +1,64 @@
+---
+title: "STAT 527 HW 1"
+author: "Satoshi Ido (ID: 34788706)"
+date: 23 January 2023
+output: pdf_document
+---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+* 1\
+(a)Evaluate the following expressions.
+```{r message = FALSE}
+a <- ((93)^2 - 164) / (46^3 + 189)
+b <- 376 - (23^2) / 4
+c <- (59 + 48^2) / ((-9) + 22^2)
+d <- (-16 + 55^2) / 13 + 29^2
+e <- 18^4 - 16^3 + 14^2 - 12
+c(a, b, c, d, e)
+```
+* 1\
+(b)Evaluate 3x for x = 1, 2, . . . , 20 and store the values in a vector. Print the vector with the function print(). Report the length of the vector with the function length().
+```{r message = FALSE}
+x <- 1:20
+print(3 * x)
+length(3 * x)
+```
+
+* 2\
+(10 points) If you throw a baseball at an angle of 45◦, at an initial velocity of 75 mph, while standing on a level field, the ball's horizontal distance x traveled after t seconds is described (neglecting air resistance) by the following equation from Newtonian physics: x = 27.12t
+Furthermore, the height above the ground after t seconds, assuming the ball was initially released at a height of 5 ft, is described by y = 1.524 + 19.71t - 4.905t^2.
+The equations have been calibrated to give the distance x and height y in meters. The ball will hit the ground after about 4.09 seconds. 
+Calculate a vector (say, x) of baseball distances for a range of values of t from 0 to 4.09. Calculate a vector of baseball heights (say, y) for the same collection of times. Make a plot of x (horizontal axis) and y (vertical axis). 
+Read from the graph of the ball's trajectory how high and how far, approximately, the ball will travel.
+```{r message = FALSE, out.width = "50%"}
+t <- 0:4.09
+x <- 27.12 * t
+y <- 1.524 + 19.71 * t - 4.905 * t^2
+plot(x, y)
+```
+
+* 3\
+(10 points) To decrease the use of insecticides in agriculture, predator insects are often released to combat insect pests. Coccinellids (lady beetles), in particular, have a voracious appetite for aphids. 
+In a recent study (Pervez and Omkar 2005), entomologists looked at the suitability of using coccinellids to control a particular aphid, Myzus persicae (common name is the ”green peach aphid”), a serious pest of many fruit and vegetable crops. 
+In the study, the entomologists experimentally ascertained aphid kill rates for three different species of coccinellids:
+Enter the data columns above into vectors, giving them descriptive names. For each type of coccinellid, use R to construct a scatterplot (type = “p”) of the feeding rate of the coccinellid versus aphid density.
+```{r message = FALSE, out.width = "50%"}
+# vectors data
+cs <- c(21, 37, 65, 102, 125, 141, 154, 164, 170, 177)
+ct <- c(21, 37, 60, 90, 109, 120, 129, 136, 140, 143)
+pd <- c(15, 26, 42, 59, 69, 74, 79, 83, 85, 82)
+# plot for each type of coccinellid
+## vector data of aphid density
+ad <- c(25, 50, 100, 200, 300, 400, 500, 600, 700, 800)
+## plot
+plot(cs, ad, type = "p", main = "the Cheilomenes sexmaculata vs Aphid density")
+
+plot(cs, ct, type = "p", main = "the Coccinella transversalis vs Aphid density")
+
+plot(cs, pd, type = "p", main = "the Propylea dissecta vs Aphid density")
+```

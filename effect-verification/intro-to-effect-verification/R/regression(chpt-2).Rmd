@@ -1,6 +1,6 @@
 ---
 title: "Selection_biased & RCT(chpt-2)"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
