@@ -13,8 +13,10 @@ email_data <- read_csv("http://www.minethatdata.com/Kevin_Hillstrom_MineThatData
 
 # (4) 女性向けメールが配信されたデータを削除したデータを作成
 male_df <- email_data %>%
-  filter(segment != "Womens E-Mail") %>% # 女性向けメールが配信されたデータを削除
-  mutate(treatment = ifelse(segment == "Mens E-Mail", 1, 0)) # 介入を表すtreatment変数を追加
+  # 女性向けメールが配信されたデータを削除
+  filter(segment != "Womens E-Mail") %>%
+  # 介入を表すtreatment変数を追加
+  mutate(treatment = ifelse(segment == "Mens E-Mail", 1, 0))
 
 # (5) セレクションバイアスのあるデータを作成
 ## seedを固定する
@@ -29,8 +31,8 @@ biased_data <- male_df %>%
   mutate(obs_rate_c = ifelse( (history > 300) | (recency < 6) | (channel == "Multichannel"), obs_rate_c, 1),
          obs_rate_t = ifelse( (history > 300) | (recency < 6) | (channel == "Multichannel"), 1, obs_rate_t),
          random_number = runif(n = NROW(male_df))) %>%
-  filter( (treatment == 0 & random_number < obs_rate_c ) |
-            (treatment == 1 & random_number < obs_rate_t) )
+  filter((treatment == 0 & random_number < obs_rate_c ) |
+            (treatment == 1 & random_number < obs_rate_t))
 
 # (6) 傾向スコアの推定
 ps_model <- glm(data = biased_data,
@@ -115,8 +117,8 @@ mail_assign <- sapply(pred_cv_rank, rbinom, n = 1, size = 1)
 ml_male_df <- male_df_test %>%
   mutate(mail_assign = mail_assign,
          ps = pred_cv_rank) %>%
-  filter( (treatment == 1 & mail_assign == 1) |
-            (treatment == 0 & mail_assign == 0) )
+  filter((treatment == 1 & mail_assign == 1) |
+            (treatment == 0 & mail_assign == 0))
 
 ## 実験をしていた場合の平均の差を確認
 rct_male_lm <- lm(data = male_df_test, formula = spend ~ treatment) %>%

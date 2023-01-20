@@ -1,0 +1,86 @@
+---
+title: "STAT 526 HW 1"
+author: "Satoshi Ido (ID: 34788706)"
+date: 23 January 2023
+output: pdf_document
+---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+# Summary
+
+
+# Analysis
+
+
+# Appendix
+
+Library import
+```{r}
+library("tidyverse")
+library("dplyr")
+library("car")
+library("GGally")
+```
+
+data import
+```{r message = FALSE}
+library(MASS); data(Cars93, package = "MASS")
+```
+
+data display
+```{r message = FALSE}
+View(Cars93)
+# number of rows
+nrow(Cars93)
+# if there is null values in the dataset
+is.null(Cars93)
+# name of the columns in the dataset
+names(Cars93)
+```
+
+create the response variable "MPG.avg" by averaging "MPG.city" and "MPG.highway"
+```{r message = FALSE}
+df <- Cars93 %>%
+        mutate(MPG.avg = (Cars93$MPG.highway + Cars93$MPG.city) / 2)
+```
+
+check the distribution of response (histogram, qq-plot) → box-cox
+```{r meesage = FALSE, out.width = "50%"}
+plot(density(df$MPG.avg))
+qqnorm(df$MPG.avg, pch = 1, frame = FALSE)
+qqline(df$MPG.avg, col = "steelblue", lwd = 2)
+```
+
+box-cox
+```{r message = FALSE, out.width = "50%"}
+## there is no 0 in MPG.avg
+min(df$MPG.avg); max(df$MPG.avg)
+p1 <- powerTransform(df$MPG.avg)
+df$MPG.avg <- bcPower(df$MPG.avg, p1$lambda)
+
+# plot again
+plot(density(df$MPG.avg))
+qqnorm(df$MPG.avg, pch = 1, frame = FALSE)
+qqline(df$MPG.avg, col = "steelblue", lwd = 2)
+
+```
+
+check the Pairwise Pearson Correlations
+```{r message = FALSE, out.width = "50%"}
+df %>%
+    subset(select = -c(MPG.city, MPG.highway)) %>%
+    round(cor(), 2)
+```
+
+stepwise with AIC and BIC
+
+ANOVA for Origin, Passengers, Type
+```{r message = FALSE, out.width = "50%"}
+
+```
+
