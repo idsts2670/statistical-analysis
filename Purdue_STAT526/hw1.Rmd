@@ -11,14 +11,6 @@ knitr::opts_chunk$set(
     message = FALSE)
 ```
 
-# Summary
-
-
-# Analysis
-
-
-# Appendix
-
 Library import
 ```{r}
 library("tidyverse")
@@ -34,6 +26,7 @@ library("MASS")
 data import
 ```{r message = FALSE}
 data(Cars93, package = "MASS")
+Cars93
 ```
 
 data display
@@ -121,7 +114,7 @@ simple <- lm(MPG.avg ~ Weight + Width + Length +
 summary(simple)
 # Regression Diagnostics
 simple.infl <- influence.measures(simple)
-print(simple.infl)
+# print(simple.infl)
 
 # check the vif. In fact, Weight has the highest vif (16.69)
 vif(simple)
@@ -158,7 +151,12 @@ M2_BIC <- stepwise(m2, direction = "forward/backward", criterion = "BIC")
 # vif of Weight become under 10.
 vif(M2_BIC)
 
+# check the summary
 summary(M2_BIC)
+
+# check the normality by residual plot
+plot(df2$Weight, resid(M2_BIC), ylab = "Residuals", xlab = "Weight", main = "Car Efficiency")
+abline(0, 0)
 ```
 
 ANOVA for Origin, Passengers, Type
