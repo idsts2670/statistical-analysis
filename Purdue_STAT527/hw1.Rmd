@@ -60,7 +60,7 @@ ad <- c(25, 50, 100, 200, 300, 400, 500, 600, 700, 800)
 ## plot
 plot(cs, ad, type = "p", main = "the Cheilomenes sexmaculata vs Aphid density")
 
-plot(cs, ct, type = "p", main = "the Coccinella transversalis vs Aphid density")
+plot(ct, ad, type = "p", main = "the Coccinella transversalis vs Aphid density")
 
-plot(cs, pd, type = "p", main = "the Propylea dissecta vs Aphid density")
+plot(pd, ad, type = "p", main = "the Propylea dissecta vs Aphid density")
 ```
