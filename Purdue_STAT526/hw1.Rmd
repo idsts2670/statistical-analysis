@@ -24,12 +24,16 @@ Library import
 library("tidyverse")
 library("dplyr")
 library("car")
-library("GGally")
+library("ggplot2")
+library("reshape2")
+library("caTools")
+library("Rcmdr")
+library("MASS")
 ```
 
 data import
 ```{r message = FALSE}
-library(MASS); data(Cars93, package = "MASS")
+data(Cars93, package = "MASS")
 ```
 
 data display
@@ -37,10 +41,13 @@ data display
 View(Cars93)
 # number of rows
 nrow(Cars93)
+# data type of each column
+str(Cars93)
 # if there is null values in the dataset
-is.null(Cars93)
+# is.na(Cars93)
 # name of the columns in the dataset
 names(Cars93)
+
 ```
 
 create the response variable "MPG.avg" by averaging "MPG.city" and "MPG.highway"
@@ -56,31 +63,130 @@ qqnorm(df$MPG.avg, pch = 1, frame = FALSE)
 qqline(df$MPG.avg, col = "steelblue", lwd = 2)
 ```
 
+
 box-cox
 ```{r message = FALSE, out.width = "50%"}
 ## there is no 0 in MPG.avg
 min(df$MPG.avg); max(df$MPG.avg)
-p1 <- powerTransform(df$MPG.avg)
-df$MPG.avg <- bcPower(df$MPG.avg, p1$lambda)
+
+df2 <- df %>%
+        na.omit() %>%
+        mutate(Cylinders = as.numeric(.$Cylinders)) %>%
+        subset(select = -c(MPG.city, MPG.highway, Min.Price, Max.Price, Manufacturer, Model, Make)) #%>%
+        # remove the non-numerical variables
+        # https://bit.ly/3ZXRAMH
+        #.[, colnames(.)[!grepl("factor|logical|character", sapply(., class))]]
+
+# boxcox
+m1 <- lm(MPG.avg ~ ., data = df2)
+bc <- boxcox(m1)
+# lambda = -2
+lambda <- bc$x[which.max(bc$y)]
+ggplot(data = df2, aes(x = (MPG.avg^lambda -1)/lambda)) + geom_histogram(fill = "blue", bins = 15)
+
+# update MPG.avg
+df2$MPG.avg <- ((df2$MPG.avg^lambda - 1) / lambda)
+m1_new <- lm(MPG.avg ~ ., data = df2)
+
+# check
+# summary(m1_new)
+# par(mfrow = c(2, 2))
+# plot(m1_new)
 
 # plot again
-plot(density(df$MPG.avg))
-qqnorm(df$MPG.avg, pch = 1, frame = FALSE)
-qqline(df$MPG.avg, col = "steelblue", lwd = 2)
+plot(density(df2$MPG.avg))
+qqnorm(df2$MPG.avg, pch = 1, frame = FALSE)
+qqline(df2$MPG.avg, col = "steelblue", lwd = 2)
+
+## boxcox
+# p1 <- powerTransform(df2$MPG.avg)
+# df2$MPG.avg <- bcPower(df2$MPG.avg, p1$lambda)
+
+# plot again
+# plot(density(df$MPG.avg))
+# qqnorm(df$MPG.avg, pch = 1, frame = FALSE)
+# qqline(df$MPG.avg, col = "steelblue", lwd = 2)
 
 ```
 
+
+
 check the Pairwise Pearson Correlations
-```{r message = FALSE, out.width = "50%"}
+From the Person Correlation matrix, there appears to be a significant amount of correlated relations between the predictor variables. It will thus be necessary to ensure that multicollinearity can be
+a concern later in my model.
+```{r message = FALSE, out.width = "40%"}
 df %>%
+    na.omit() %>%
+    mutate(Cylinders = as.numeric(.$Cylinders)) %>%
     subset(select = -c(MPG.city, MPG.highway)) %>%
-    round(cor(), 2)
+    # remove the non-numerical variables
+    # https://bit.ly/3ZXRAMH
+    .[, colnames(.)[!grepl("factor|logical|character", sapply(., class))]] %>%
+    cor(., ) %>%
+    round(., 2) %>%
+    melt() %>%
+    ggplot(., aes(x = Var1, y = Var2, fill = value)) +
+        geom_tile() +
+        scale_fill_distiller(direction = +1) +
+        geom_text(aes(Var2, Var1, label = value), color = "black", size = 4) +
+        theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+Linear Models to grasp the trend
+```{r message = FALSE}
+# simple linear model
+# I use my intuition for now. Simply, I suppose the size of a car and engine and fuel tank are correlated with the car efficiency
+simple <- lm(MPG.avg ~ Weight + Width + Length +
+                    Fuel.tank.capacity + Horsepower,
+                    data = df
+                    )
+# it is already high R-squared score. Width and Horsepower are insignificant. there can be multicollinearity among them.
+summary(simple)
+# Regression Diagnostics
+simple.infl <- influence.measures(simple)
+print(simple.infl)
+influence.measures
+# check the vif. In fact, Weight has the most highest vif
+vif(simple)
+
+# get rid of the weight parameter
+simple_v2 <- lm(MPG.avg ~ Width + Length +
+                    Fuel.tank.capacity + Horsepower,
+                    data = df
+                    )
+# Indeed, the only one parameter became significant. This model is not preferrable in terms of Interpretability.
+summary(simple_v2)
+vif(simple_v2)
 ```
 
 stepwise with AIC and BIC
+```{r message = FALSE}
+# use stepwise methods based on AIC and BIC
+# df2 <- df %>%
+#     subset(select = -c(MPG.city, MPG.highway, Min.Price, Max.Price, Manufacturer, Model)) %>%
+#     na.omit() %>%
+#     mutate(Cylinders = as.numeric(.$Cylinders)) %>%
+#     .[, colnames(.)[!grepl("factor|logical|character", sapply(., class))]]
+# m0 <- lm(data = df2, MPG.avg ~ Weight)
+m1 <- lm(data = df2, MPG.avg ~ .)
+M1_BIC <- stepwise(m1, direction = "forward/backward", criterion = "BIC")
+M1_AIC <- stepwise(m1, direction = "forward/backward", criterion = "AIC")
+summary(M1_BIC)
+summary(M1_AIC)
+
+
+# vif
+vif(M1)
+# since Weight's vif is higher than 10 so I will try to remove some of variables while maintaing R-squared score, and found that getting rid of Fuel.tank.capacity
+m2 <- lm(data = df2, MPG.avg ~ Price + Cylinders + Wheelbase + Weight)
+M2 <- stepwise(m2, direction = "backward", criterion = "BIC")
+
+
+```
 
 ANOVA for Origin, Passengers, Type
 ```{r message = FALSE, out.width = "50%"}
+
 
 ```
 
