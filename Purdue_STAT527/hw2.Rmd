@@ -1,0 +1,71 @@
+---
+title: "STAT 527 HW 1"
+author: "Satoshi Ido (ID: 34788706)"
+date: 23 January 2023
+output: pdf_document
+---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+1\
+(10 points) According to Newton's universal law of gravitation, \
+the acceleration of an object in the direction of the sun due to the sun's gravity can be written in the form \
+$$
+a = \frac{1}{r^2}
+$$ \
+Here, r is the distance of the object from the sun's center, in astronomical units (AU) of distance. 
+One AU is the average distance of the Earth from the sun, about 150 million kilometers. 
+The units of a are scaled for convenience in this version of Newton's equation so that one unit of acceleration is experienced at a distance of 1AU. 
+Use the equation to calculate the gravitational accelerations at each of the planets' average distances from the sun:
+```{r message = FALSE}
+Mercury <- 1 / (0.39)^2
+Venus <- 1 / (0.723)^2
+Mars <- 1 / (1.524)^2
+Jupiter <- 1 / (5.203)^2
+Saturn <- 1 / (9.539)^2
+Uranus <- 1 / (19.18)^2
+Neptune <- 1 / (30.06)^2
+Pluto <- 1 / (39.53)^2
+a <- c(Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto)
+# the gravitational accelerations at each of the planets’ average distances from the sun
+print(a)
+```
+
+2\
+(10 points) Using the equation from Question 1, draw a graph of the gravitational acceleration (vertical axis) versus a range of values of r ranging from around 0.4AU (distance of Mercury) to around 5.2AU (distance of Jupiter). 
+According to Newton's gravitational law, is there any distance at which the sun's gravity is escaped entirely?
+```{r message = FALSE, out.width = "70%"}
+r <- 0.4:5.2
+a <- 1 / r^2
+plot(r, a, xlab="AU", ylab="the gravitational acceleration", xaxp = c(0.4, 5.2, 8))
+```
+
+3\
+(10 points) The following (next page) are the population sizes of the United States through its entire history, according to the U.S. Census. 
+Construct a line plot (type=”I”) of the U.S. population (vertical axis) versus time (horizontal axis). 
+By the way, rounding the population sizes to the nearest 100,000 or so will hardly affect the appearance of the graph.
+Change the script and repeat the plot six more times (saving the graph each time), using type=”p”, type=”b”, type=”C”, type=”o”, type=”h”, and type=”l”. 
+Compare the different graph types. What different aspects of the data are emphasized by the different graph types?
+```{r message = FALSE, figure-side, fig.show="hold", out.width="48%"}
+library("plyr")
+
+data <- c(3929214, 5308483, 7239881, 9638453, 12860702, 17063353, 23191876, 31443321, 38558371, 50189209,
+            62979766, 76212168, 92228496, 106021537, 123202624, 142164569, 161325798, 189323175, 213302031,
+            236542199, 258709873, 291421906
+        )
+time <- seq(1790, 2000, 10)
+round_data <- round_any(data, 100000)
+# The line plot of of the U.S. population vs time
+plot(time, round_data, type = "l", las = 1, cex.axis = 0.5)
+
+# Compare with the different graph types
+plot(time, round_data, type = "p", las = 1, cex.axis = 0.5)
+plot(time, round_data, type = "b", las = 1, cex.axis = 0.5)
+plot(time, round_data, type = "c", las = 1, cex.axis = 0.5)
+plot(time, round_data, type = "o", las = 1, cex.axis = 0.5)
+plot(time, round_data, type = "h", las = 1, cex.axis = 0.5)
+```
