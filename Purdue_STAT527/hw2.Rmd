@@ -1,5 +1,5 @@
 ---
-title: "STAT 527 HW 1"
+title: "STAT 527 HW 2"
 author: "Satoshi Ido (ID: 34788706)"
 date: 30 January 2023
 output: pdf_document
