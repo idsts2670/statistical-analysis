@@ -1,0 +1,103 @@
+---
+title: "STAT 526 HW 2"
+author: "Satoshi Ido (ID: 34788706)"
+date: 6 February 2023
+output: pdf_document
+---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+# Q2(a)
+eta = -6+8x
+```{r}
+# create a vector of the 51 x values which are incremented by 0.2
+x <- seq(0, 1, by = 0.02)
+# formula
+eta <- - 6 + 8 * x
+
+# Bernouli trials
+y <- rbinom(length(eta), 1, 1/(1+exp(-eta)))
+
+length(y)
+table(y)
+
+# check the summary to get beta0 and beta1
+summary(glm(y ~ x, family = "binomial"))$coefficients[,1]
+
+# get histogram
+betas <- matrix(NA, 1000, 2)
+for (i in 1:1000) {
+  y <- rbinom(length(eta), 1, 1/(1+exp(-eta)))
+  betas[i, ] <- summary(glm(y ~ x, family = "binomial"))$coefficients[, 1]
+}
+## histogram of Intercept
+hist(betas[, 1], br = 50, main = "histogram of beta0")
+## histogram of x
+hist(betas[, 2], br = 50, main = "histogram of beta1")
+summary(betas[, 1])
+summary(betas[, 2])
+```
+
+eta2 = -3 + 4x
+```{r}
+eta2 <- -3 + 4 * x
+# Bernouli trials
+y2 <- rbinom(length(eta), 1, 1/(1+exp(-eta)))
+
+length(y2)
+table(y2)
+
+# check the summary to get beta0 and beta1
+summary(glm(y2 ~ x, family = "binomial"))$coefficients[, 1]
+
+# get histogram
+betas2 <- matrix(NA, 1000, 2)
+for(i in 1:1000) {
+  y2 <- rbinom(length(eta), 1, 1/(1+exp(-eta2)))
+  betas2[i, ] <- summary(glm(y2 ~ x, family = "binomial"))$coefficients[, 1]
+}
+summary(betas2[, 1])
+summary(betas2[, 2])
+
+## histogram of Intercept
+hist(betas2[, 1], br = 50, , main = "histogram of beta0")
+## histogram of x
+hist(betas2[, 2], br = 50, , main = "histogram of beta1")
+```
+
+
+# Q2(b)
+eta = - 6 + 8x
+```{r}
+x <- seq(0, 1, by = 0.02)
+# calculate the probability of cdf
+p <- plogis(- 6 + 8 * x)
+# calculate the variance
+v <- p * (1 - p)
+
+# calculate Hessian
+h <- rbind(1, x) %*%
+    diag(v) %*%
+    cbind(1, x)
+solve(h)
+```
+
+eta = - 3 + 4x
+```{r}
+x <- seq(0, 1, by = 0.02)
+# calculate the probability of cdf
+p <- plogis(- 3 + 4 * x)
+# calculate the variance
+v <- p * (1 - p)
+
+# calculate Hessian
+h <- rbind(1, x) %*%
+    diag(v) %*%
+    cbind(1, x)
+solve(h)
+
+```

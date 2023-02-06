@@ -37,10 +37,10 @@ Hint: you may find the R functions exp() and factorial() being useful.
 ```{r message = FALSE, out.width = "80%"}
 cdf <- function(lambda, x) {
     a <- 0:x
-    pmf <- lambda ^ a * exp(lambda * (-1)) / factorial(a)
-    out <- unlist(ecdf(pmf))
-    # out2 <- ppois(a, lambda)
-    return(out)
+    # qpmf <- lambda ^ a * exp(lambda * (-1)) / factorial(a)
+    # out <- unlist(ecdf(pmf))
+    out2 <- ppois(a, lambda)
+    return(out2)
 }
 a <- 0:10
 plot(cdf(1, 10), xlab = "Number of events", ylab = "F(x)",
