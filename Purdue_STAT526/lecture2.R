@@ -27,3 +27,6 @@ anova(cats0, cats1, cats2)
 anova(cats2)
 ### show the outputs if we drop any one of variables (but if we have interactions, we are suggested to drop only interactions)
 drop1(cats2)
+
+data(budworm)
+budworm; budwm.lgt; res.dev <- resid(budwm.lgt)

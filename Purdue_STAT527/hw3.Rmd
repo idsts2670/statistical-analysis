@@ -1,7 +1,7 @@
 ---
 title: "STAT 527 HW 3"
 author: "Satoshi Ido (ID: 34788706)"
-date: 5 February 2023
+date: 6 February 2023
 output: pdf_document
 ---
 ```{r setup, include = FALSE, cache = FALSE}
@@ -39,7 +39,7 @@ cdf <- function(lambda, x) {
     a <- 0:x
     pmf <- lambda ^ a * exp(lambda * (-1)) / factorial(a)
     out <- cumsum(pmf)
-    out2 <- ppois(a, lambda)
+    # out2 <- ppois(a, lambda)
     return(out)
 }
 a <- 0:10
