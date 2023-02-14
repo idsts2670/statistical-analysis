@@ -1,0 +1,38 @@
+---
+title: "STAT 527 HW 5"
+author: "Satoshi Ido (ID: 34788706)"
+date: 20 February 2023
+output: pdf_document
+---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+1. (10 points) Fibonacci sequence. If you put some coefficients in the recursion, like ri+1 = ari + bri-1,
+where you choose the numbers a and b, then you will have an entirely new sequence. Write a function that takes a, b and the sequence length n as arguments. The function should return the entire sequence. Choose appropriate input arguments and plot the returned sequence.
+```{r}
+
+r <- function(a, b, n) {
+    # start with i = 1 and i-1 = 0
+    i <- 0; r1 <- 0; r2 <- 1
+    while (i < n) {
+        r3 <- a * r2 + b * r1
+        print(r3)
+        # update values
+        i <- i + 1
+        r1 <- r2
+        r2 <- i
+    }
+}
+# Choose a = 1, b = 1, n = 10
+r(1, 1, 10)
+```
+
+2. (20 points) 0-1 knapsack problem. Given a set of items, each with a weight and a value, determine which items to include in the collection so that the total weight is less than or equal to a given limit and the total value is as large as possible.
+Mathematically, given a set of n items numbered from 1 up to n, each with a weight wi and a value vi, along with a maximum weight capacity W (assumed to be an integer), the 0-1 knapsack problem aims to solve the following optimization problem:
+```{r}
+
+```
