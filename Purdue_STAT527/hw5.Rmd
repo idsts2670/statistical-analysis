@@ -38,28 +38,31 @@ wt <- c(10, 20, 30)
 vt <- c(60, 100, 120)
 w <- 50
 n <- length(wt)
-M <- matrix(0, nrow = n + 1, ncol = w + 1)
+M <- matrix(0, nrow = n + 1, ncol = w)
 k <- function(x) {x + 1}
-Knapsack <- function(wt, vt, w) {
+
+# function
+Knapsack <- function(weight, value, capacity) {
     # to skip the first row, start with 2 to k(n)
     for (i in 2:k(n)) {
-        for (j in 0:w) {
+        for (j in 1:w) {
+    # if the weight of new item is over j-th, use the value at {(i-1), j}
             if (j < wt[i - 1]) {
-                #print(wt[i - 1])
                 M[i, j] <- M[i - 1, j]
             }
+    # ifelse, comparing m[i-1,w] & m[i-1,w-wi]+v and pick the bigger one
         else {
-            M[i, j] <- max(M[i - 1, j - wt[i - 1]] + vt[i], M[i - 1, j])
-            print(i); print(j)
-            print(M[i - 1, j - wt[i - 1]] + vt[i])
+            M[i, j] <- max(M[i - 1, j], M[i - 1, j - wt[i - 1]] + vt[i - 1])
             }
         }
     }
     return(M)
 }
 
-for (i in 2:k(n)) {
-        print(wt[i-1])
-}
-# wt = {10,20,30}, vt = {60,100,120} and W = 50.
+# wt = {10,20,30}, vt = {60,100,120} and W = 50
+M <- Knapsack(wt, vt, w)
+# change the row names
+rownames(M) <- 0:3
+
+M
 ```
