@@ -19,12 +19,12 @@ r <- function(a, b, n) {
     # start with i = 1 and i-1 = 0
     i <- 0; r1 <- 0; r2 <- 1
     while (i < n) {
+        print(r1)
         r3 <- a * r2 + b * r1
-        print(r3)
         # update values
         i <- i + 1
         r1 <- r2
-        r2 <- i
+        r2 <- r3
     }
 }
 # Choose a = 1, b = 1, n = 10
@@ -34,5 +34,23 @@ r(1, 1, 10)
 2. (20 points) 0-1 knapsack problem. Given a set of items, each with a weight and a value, determine which items to include in the collection so that the total weight is less than or equal to a given limit and the total value is as large as possible.
 Mathematically, given a set of n items numbered from 1 up to n, each with a weight wi and a value vi, along with a maximum weight capacity W (assumed to be an integer), the 0-1 knapsack problem aims to solve the following optimization problem:
 ```{r}
+wt <- c(10, 20, 30)
+vt <- c(60, 100, 120)
+w <- 51
+n <- length(wt) + 1
+M <- matrix(, nrow = n, ncol = w)
+k <- function(x) {x + 1}
+Knapsack <- function(wt, vt, w) {
+    for(i in n) {
+        if i == 0
+        for(j in w) {
+            if j < 
+        }
+        M[i, 0:(wt[i] - 1)] == M[i - 1, 0:(wt[i] - 1)]
+        M[i, wt[i]:w] 
+        M[i, k(0):k(wt[i] - 1)] == M[i - 1, k(0):k(wt[i] - 1)]
+    }
+}
 
+# wt = {10,20,30}, vt = {60,100,120} and W = 50.
 ```
