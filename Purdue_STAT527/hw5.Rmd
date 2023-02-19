@@ -56,13 +56,12 @@ Knapsack <- function(weight, value, capacity) {
             }
         }
     }
+    # change the row names
+    rownames(M) <- 0:3
     return(M)
 }
 
 # wt = {10,20,30}, vt = {60,100,120} and W = 50
 M <- Knapsack(wt, vt, w)
-# change the row names
-rownames(M) <- 0:3
-
 M
 ```
