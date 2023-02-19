@@ -41,8 +41,8 @@ n <- length(wt)
 M <- matrix(0, nrow = n + 1, ncol = w)
 k <- function(x) {x + 1}
 
-# function
-Knapsack <- function(weight, value, capacity) {
+# function (wt = weight, vt = value, w = limit)
+Knapsack <- function(wt, vt, w) {
     # to skip the first row, start with 2 to k(n)
     for (i in 2:k(n)) {
         for (j in 1:w) {
