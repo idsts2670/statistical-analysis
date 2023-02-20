@@ -39,3 +39,19 @@ plot(df.lgt0)
 df.lgt1 <- glm(y ~ 1, family = binomial(link = probit), data = df)
 df.lgt1
 ```
+
+# Q3
+```{r}
+admitted <- rep(c(0, 1), each = 2)
+count <- c(94, 53, 299, 138)
+sex <- rep(c(0, 1), 2)
+df <- data.frame(sex, admitted, count)
+
+# Q3-(a)
+model <- glm(count ~ sex + admitted + sex:admitted, family = poisson, data = df)
+model
+
+# Q3-(b) & Q3-(c)
+model2 <- glm(count ~ sex + admitted, family = poisson, data = df)
+model2
+```
