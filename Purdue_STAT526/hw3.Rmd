@@ -1,0 +1,41 @@
+---
+title: "STAT 526 HW 3"
+author: "Satoshi Ido (ID: 34788706)"
+date: 20 February 2023
+output: pdf_document
+---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+# Q1-a
+```{r}
+x <- (-150:150)/25; plot(x,1-1/(1+exp(x)),type="l",ylab="p")
+         lines(x,pnorm(x),col=2); lines(x,1-exp(-exp(x)),col=3)
+         lines(c(-6,6),c(.5,.5),lty=2,col=1)
+lines(x,pnorm(x,sd=1.7),col=6)
+```
+
+
+# Q1-e
+```{r}
+df <- data.frame(
+        x = c(14, 29, 6, 25, 18, 4, 18, 12, 22, 6, 30, 11, 30, 5, 
+            20, 13, 9, 32, 24, 13, 19, 4, 28, 22),
+        y = c(0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 
+            0, 1, 0, 1, 0, 0, 1, 1)
+        )
+
+# train the glm
+df.lgt0 <- glm(y ~ x, family = binomial, data = df)
+summary(df.lgt0)
+anova(df.lgt0)
+summary(df.lgt0)
+plot(df.lgt0)
+
+df.lgt1 <- glm(y ~ 1, family = binomial(link = probit), data = df)
+df.lgt1
+```
