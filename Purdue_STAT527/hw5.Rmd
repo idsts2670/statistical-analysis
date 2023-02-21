@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
 1. (10 points) Fibonacci sequence. If you put some coefficients in the recursion, like ri+1 = ari + bri-1,
 where you choose the numbers a and b, then you will have an entirely new sequence. Write a function that takes a, b and the sequence length n as arguments. The function should return the entire sequence. Choose appropriate input arguments and plot the returned sequence.
 ```{r}
-
+my_list <- list()
 r <- function(a, b, n) {
     # start with i = 1 and i-1 = 0
     i <- 0; r1 <- 0; r2 <- 1
@@ -25,10 +25,15 @@ r <- function(a, b, n) {
         i <- i + 1
         r1 <- r2
         r2 <- r3
+        # add the Fibonacci sequences in the list
+        my_list[[length(my_list) + 1]] <- r1
     }
+    return(my_list)
 }
 # Choose a = 1, b = 1, n = 10
-r(1, 1, 10)
+l <- r(1, 1, 10)
+
+plot(0:9, l, xlab = "Index", ylab = "Value")
 ```
 
 2. (20 points) 0-1 knapsack problem. Given a set of items, each with a weight and a value, determine which items to include in the collection so that the total weight is less than or equal to a given limit and the total value is as large as possible.
@@ -58,6 +63,8 @@ Knapsack <- function(wt, vt, w) {
     }
     # change the row names
     rownames(M) <- 0:3
+    # get the maximum value in the matrix
+    M <- max(M)
     return(M)
 }
 
