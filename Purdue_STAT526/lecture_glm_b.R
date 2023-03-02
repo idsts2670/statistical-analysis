@@ -1,13 +1,16 @@
 # Binomial Family
 # budworm data input from MASS book
 "budworm" <-
-structure(list(numdead = c(1, 4, 9, 13, 18, 20, 0, 2, 6, 10, 
-12, 16), ldose = c(0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5), sex = structure(c(2, 
-2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1), .Label = c("F", "M"), class = "factor"), 
-    SF = structure(c(1, 4, 9, 13, 18, 20, 0, 2, 6, 10, 12, 16, 
-    19, 16, 11, 7, 2, 0, 20, 18, 14, 10, 8, 4), .Dim = c(12, 
-    2))), .Names = c("numdead", "ldose", "sex", "SF"), row.names = c("1", 
-"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"), class = "data.frame")
+structure(list(
+        numdead = c(1, 4, 9, 13, 18, 20, 0, 2, 6, 10, 12, 16),
+        ldose = c(0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5),
+        sex = structure(c(2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1), .Label = c("F", "M"), class = "factor"),
+        SF = structure(c(1, 4, 9, 13, 18, 20, 0, 2, 6, 10, 12, 16, 19, 16, 11, 7, 2, 0, 20, 18, 14, 10, 8, 4), 
+        .Dim = c(12, 2))), 
+        .Names = c("numdead", "ldose", "sex", "SF"),
+        row.names = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"), 
+        class = "data.frame")
+
 "budworm2" <-
 structure(list(ldose = c(0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 
 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5), sex = structure(c(2, 2, 
@@ -25,7 +28,10 @@ structure(list(ldose = c(0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5,
 
 budworm
 budworm2
+# https://bit.ly/3kgkiID
 # https://bit.ly/3IeQdBq
+# https://bit.ly/3EkTe22
+# https://bit.ly/3KjJ5Gm
 
 # training glm
 ## these two below are the same
