@@ -5,6 +5,8 @@ library("MASS")
 
 data(ships, package = "MASS")
 ships$year <- factor(ships$year)
+class(ships$year)
+class(ships$period)
 ships.log0 <- glm(
                 incidents ~ type + year + period + log(service),
                 poisson, ships, subset = service > 0
@@ -16,10 +18,15 @@ ships.log <- update(ships.log0, . ~ . - log(service),
 
 summary(ships.log)
 plot(ships.log)
-
+# Stepwise regression, with AIC = −2l(βˆ) + 2p, adds type:year
+# why ^2?? <----------------------------------------------------------????
 ships.log1 <- step(ships.log, . ~ .^2)
-drop1(ships1.log1)
-disp <- sum(resid(ships.log1, "pear")^2) / 13
+drop1(ships.log1, test= "F")
+# why ^2?? where 13 come from?? Is it variance λ = 13?? <----------------------------------------------------------????
+# Understanding Deviance Residuals https://bit.ly/41F8jW0
+# Pearson's chi^2 statistics??
+disp <- sum(resid(ships.log1, type = "pear")^2) / 13
+# pchisq() computes cumulative chi square density for a vector of elements
 1 - pchisq((38.695 - 14.587) / disp, 12)
 
 
