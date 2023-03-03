@@ -35,13 +35,30 @@ disp <- sum(resid(ships.log1, type = "pear")^2) / 13
 ships.nb <- update(ships.log, family = neg.bin(20))
 summary(ships.nb)
 
-# why the two results below are the same even though one is using offset and the other dont? <----------------------------------------------------------????
+# are these two below the exactly same? <----------------------------------------------------------????
 ships.nb1 <- glm.nb(incidents ~ type + year + period + log(service), data = ships, subset = service > 0)
 ships.nb2 <- glm.nb(ships.log0)
-# the correlation matrix of the estimated parameters is returned and printed
+## the correlation matrix of the estimated parameters is returned and printed
 summary(ships.nb1, cor = TRUE)
+summary(ships.nb2)
 
+# Contingency Table: Example
 
+## create the data
+eye <- cbind(expand.grid(Left = c("A", "B"), Right = c("A", "B")), Fr = c(45, 12, 13, 54))
+
+## saturated model
+glm(Fr ~ Left * Right, poisson, eye)
+## coef of each beta
+log(45); log(12) - log(45); log(13) - log(45)
+
+## additive model
+add.fit <- glm(Fr ~ Left + Right, poisson, eye)
+fitted(add.fit, type = "res")
+## estimated value
+log((45 + 12) * (45 + 13) / sum(45, 12, 13, 54))
+add.fit
+log((12 + 54) / (45 + 13))
 
 
 "Migration" <-
