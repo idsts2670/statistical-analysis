@@ -31,8 +31,16 @@ disp <- sum(resid(ships.log1, type = "pear")^2) / 13
 
 
 # Negative Binomial Examples
-## ship damage data from MASS package
+# What is the positive points of this model over logistic model? <----------------------------------------------------------????
 ships.nb <- update(ships.log, family = neg.bin(20))
+summary(ships.nb)
+
+# why the two results below are the same even though one is using offset and the other dont? <----------------------------------------------------------????
+ships.nb1 <- glm.nb(incidents ~ type + year + period + log(service), data = ships, subset = service > 0)
+ships.nb2 <- glm.nb(ships.log0)
+# the correlation matrix of the estimated parameters is returned and printed
+summary(ships.nb1, cor = TRUE)
+
 
 
 
