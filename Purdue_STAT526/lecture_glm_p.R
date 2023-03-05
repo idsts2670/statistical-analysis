@@ -7,6 +7,8 @@ data(ships, package = "MASS")
 ships$year <- factor(ships$year)
 class(ships$year)
 class(ships$period)
+
+# modeling
 ships.log0 <- glm(
                 incidents ~ type + year + period + log(service),
                 poisson, ships, subset = service > 0
@@ -18,17 +20,19 @@ ships.log <- update(ships.log0, . ~ . - log(service),
 
 summary(ships.log)
 plot(ships.log)
+
 # Stepwise regression, with AIC = −2l(βˆ) + 2p, adds type:year
 # why ^2?? <----------------------------------------------------------????
 ships.log1 <- step(ships.log, . ~ .^2)
 drop1(ships.log1, test= "F")
-# why ^2?? where 13 come from?? Is it variance λ = 13?? <----------------------------------------------------------????
+
+# dispersion parameter = (Pearson's X^2 statistics) / (n-p = 13)
 # Understanding Deviance Residuals https://bit.ly/41F8jW0
-# Pearson's chi^2 statistics??
-disp <- sum(resid(ships.log1, type = "pear")^2) / 13
+disp <- sum(resid(ships.log1, type = "pear")^2) / ships.log1$df.residual
+
 # pchisq() computes cumulative chi square density for a vector of elements
 1 - pchisq((38.695 - 14.587) / disp, 12)
-
+ships.log1$df.residual
 
 # Negative Binomial Examples
 # What is the positive points of this model over logistic model? <----------------------------------------------------------????
@@ -61,181 +65,131 @@ add.fit
 log((12 + 54) / (45 + 13))
 
 
-"Migration" <-
-structure(list(move66 = structure(c(1, 2, 3, 4, 1, 2, 3, 4, 1, 
-2, 3, 4, 1, 2, 3, 4), .Label = c("CC", "ULY", "WM", "GL"), class = "factor"), 
-    move71 = structure(c(1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 
-    4, 4, 4, 4), .Label = c("CC", "ULY", "WM", "GL"), class = "factor"), 
-    Fr = c(118, 14, 8, 12, 12, 2127, 69, 110, 7, 86, 2548, 88, 
-    23, 130, 107, 7712)), .Names = c("move66", "move71", "Fr"
-), row.names = c("1", "2", "3", "4", "5", "6", "7", "8", "9", 
-"10", "11", "12", "13", "14", "15", "16"), class = "data.frame")
+# Contingency Table: Example
 
-Migration
+data(HairEyeColor)
+lab <- dimnames(HairEyeColor)
+# combine the multiple datasets
+HairEye <- cbind(expand.grid(Hair = lab$Hair, Eye = lab$Eye, Sex = lab$Sex),
+                Fr = as.vector(HairEyeColor))
+# modeling
+HairEye.fit <- glm(Fr ~ . ^2, poisson, HairEye)
+# we get the pretty low residual deviance
+HairEye.fit
+# stepwise to select the parameters
+drop1(HairEye.fit)
+sum(resid(HairEye.fit, "pear")^2)
+
+
+# Mover-Stayer Model
+
+# read csv files
+Migration <- read.csv("./Purdue_STAT526/Migration.csv")
+
+# return diagonal of 1:4
+diag(1:4)
+# convert a vector object to a factor
 Migration$stay <- as.factor(diag(1:4))
 
 matrix(Migration$Fr, 4, 4)
 matrix(Migration$stay, 4, 4)
 
 M.S.fit <- glm(Fr ~ stay + move66 + move71, poisson, Migration)
-jk9 <- predict(M.S.fit, data.frame(move66 = Migration$move66, move71 = Migration$move71, stay = as.factor(0), type = "res")) # nolint
+
+# get the predicted number of movers on the diagnol
+predict(M.S.fit, type = "res", data.frame(stay = as.factor(0), move66 = "CC", move71 = "CC"))
+jk9 <- predict(M.S.fit, 
+            data.frame(
+                move66 = Migration$move66,
+                move71 = Migration$move71,
+                stay = as.factor(0),
+                type = "res"
+                )
+            )
 
 jk8 <- matrix(jk9, 4, 4)
-jk8[,1]/jk8[,2]
+jk8[, 1] / jk8[, 2]
 
-sum(jk9)/sum(Migration$Fr)
+# what does this percentage tell us?  <----------------------------------------------------------????
+sum(jk9) / sum(Migration$Fr)
 
 matrix(fitted(M.S.fit, "res"), 4, 4)
-
 matrix(resid(M.S.fit, "res"), 4, 4)
 
-matrix(resid(M.S.fit, "res"), 4, 4)
 
-Migration$symm <- as.factor(c(0, 12, 13, 14, 12, 0, 23, 24, 13, 23, 0,34, 14, 24, 34,0)) # nolint
+# Square Table: Symmetry
+
+# what does these numbers? are these just random numbers <----------------------------------------------------------????
+Migration$symm <- as.factor(c(0, 12, 13, 14, 12, 0, 23, 24, 13, 23, 0,34, 14, 24, 34, 0))
 matrix(Migration$symm, 4, 4)
-# 6 residual (16 - 10) over parametized
-glm(Fr~stay+symm,poisson,Migration)
+
+# 6 residual (16 - 10) over parametized <----------------------------------------------------------????
+glm(Fr ~ stay + symm, poisson, Migration)
 matrix(Migration$stay, 4, 4)
+# what does this percentage tell us?  <----------------------------------------------------------????
 1 - pchisq(9.128, 6)
 
-# macnemar test. it only look at the 
-# if two off-diagnoal is the same (looking at the two cell at the same time), expected  # nolint
-mcnemar.test(matrix(Migration$Fr,4,4))
+# macnemar test determines if there is a statistically significant difference in proportions between paired data
+# if two off-diagnoal is the same (looking at the two cell at the same time), expected
+mcnemar.test(matrix(Migration$Fr, 4, 4))
 
-# what is this???
-sum(resid(glm(Fr ~ stay + symm, poisson, Migration), "pear")^2)
+# is this Pearson X^2 statistics?? <----------------------------------------------------------????
+sum(resid(glm(Fr ~ stay + symm, poisson, Migration), type = "pear")^2)
 
+# Surrogate Log Linear Model: Example (Binomial Family)
 
-"boys" <-
-structure(list(boy = c(0, 1, 2, 3, 4, 5, 6), girl = c(6, 5, 4, 
-3, 2, 1, 0), fr = c(1096, 6233, 15700, 22221, 17332, 7908, 1579
-)), .Names = c("boy", "girl", "fr"), row.names = c("1", "2", 
-"3", "4", "5", "6", "7"), class = "data.frame")
-boys
-boys.log<-glm(fr~boy,poisson,boys,off=lchoose(6,boy))
-boys.log
-boys.lgt<-glm(cbind(boy,girl)~1,binomial,boys,wei=fr)
-boys.lgt
-# these two below are same
-predict(boys.log,type="res")/72069
-dbinom(0:6,6,plogis(boys.lgt$coef))
-sum(resid(boys.log, "pear")^2)
-
-# toward the end, it gets positive, but the middle it becomes negative. so we may need quadratic form.
-plot(0:6, resid(boys.log, "work"))
-boys.log2<-glm(fr~boy+I(boy^2),poisson, boys,off=lchoose(6,boy))
-boys.log2
-# this one is more civilized
-sum(resid(boys.log2, "pear")^2)
-
-prob<-predict(boys.log2,type="res")/72069
-mu <- sum((0:6)*prob)
-mu
-#p
-#6*p
-# 
-sigmasq<-sum((0:6)^2*prob)-mu^2
-sigmasq
-
-# with only 6 parameters, this overdispersion is ignorable but with a large number of sample size, we cannot 
-disp <- sigmasq/ (6*mu/6*(1-mu/6))
-disp
-sum(resid(boys.lgt,type="pear")^2)/72068
-
-
-# Binomial Family
-# budworm data input from MASS book
 # 12 different x values
-"budworm" <-
-structure(list(
-        numdead = c(1, 4, 9, 13, 18, 20, 0, 2, 6, 10, 12, 16),
-        ldose = c(0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5),
-        sex = structure(c(2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1), .Label = c("F", "M"), class = "factor"),
-        SF = structure(c(1, 4, 9, 13, 18, 20, 0, 2, 6, 10, 12, 16, 19, 16, 11, 7, 2, 0, 20, 18, 14, 10, 8, 4), 
-        .Dim = c(12, 2))), 
-        .Names = c("numdead", "ldose", "sex", "SF"),
-        row.names = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"), 
-        class = "data.frame")
+budworm <- read.csv("./Purdue_STAT526/budworm.csv")
 
 # Poisson y
-"budworm2" <-
-structure(list(ldose = c(0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 
-0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5), sex = structure(c(2, 2, 
-2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 
-1), .Label = c("F", "M"), class = "factor"), Fr = c(1, 4, 9, 
-13, 18, 20, 0, 2, 6, 10, 12, 16, 19, 16, 11, 7, 2, 0, 20, 18, 
-14, 10, 8, 4), dead = structure(c(2, 2, 2, 2, 2, 2, 2, 2, 2, 
-2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), .Label = c("0", 
-"1"), class = "factor"), id = structure(c(1, 2, 3, 4, 5, 6, 7, 
-8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), .Label = c("1", 
-"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"), class = "factor")), .Names = c("ldose", 
-"sex", "Fr", "dead", "id"), row.names = c("1", "2", "3", "4", 
-"5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", 
-"16", "17", "18", "19", "20", "21", "22", "23", "24"), class = "data.frame")
+budworm2 <- read.csv("./Purdue_STAT526/budworm2.csv")
 
 is.factor(budworm2$dead)
 
-budworm
-budworm2
-
-# previous model
+# additive model
 budwm.lgt <- glm(SF ~ ldose + sex, family = binomial, data = budworm)
-budwm.lgt
 
 # new method
 ## coefficients are just alpha for checking the a expected total and observed total are equal
 ## coefficent of dead1:ldose = that of ldose in budwm.lgt.
 ## dead1 = (Intercept) in budwm.lgt
 budwm.log <- glm(Fr ~ id + dead * (ldose + sex) - 1, poisson, budworm2)
-budwm.log
+summary(budwm.log)
+summary(budwm.lgt)
 
 
-"detg" <-
-structure(list(Brand = structure(c(1, 2, 1, 2, 1, 2, 1, 2, 1, 
-2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2), .Label = c("X", 
-"M"), class = "factor"), Temp = structure(c(1, 1, 2, 2, 1, 1, 
-2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2), .Label = c("Low", 
-"High"), class = "factor"), M.user = structure(c(1, 1, 1, 1, 
-2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2), .Label = c("N", 
-"Y"), class = "factor"), Soft = structure(c(3, 3, 3, 3, 3, 3, 
-3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1), .Label = c("Soft", 
-"Medium", "Hard"), class = c("ordered", "factor")), Fr = c(68, 
-42, 42, 30, 37, 52, 24, 43, 66, 50, 33, 23, 47, 55, 23, 47, 63, 
-53, 29, 27, 57, 49, 19, 29)), .Names = c("Brand", "Temp", "M.user", 
-"Soft", "Fr"), row.names = c("1", "2", "3", "4", "5", "6", "7", 
-"8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", 
-"19", "20", "21", "22", "23", "24"), class = "data.frame")
-"detg1" <-
-structure(list(Temp = structure(c(1, 2, 1, 2, 1, 2, 1, 2, 1, 
-2, 1, 2), class = "factor", .Label = c("Low", "High")), M.user = structure(c(1, 
-1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2), class = "factor", .Label = c("N", 
-"Y")), Soft = structure(c(3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1), class = c("ordered", 
-"factor"), .Label = c("Soft", "Medium", "Hard")), M = c(42, 30, 
-52, 43, 50, 23, 55, 47, 53, 27, 49, 29), X = c(68, 42, 37, 24, 
-66, 33, 47, 23, 63, 29, 57, 19)), .Names = c("Temp", "M.user", 
-"Soft", "M", "X"), row.names = c("1", "3", "5", "7", "9", "11", 
-"13", "15", "17", "19", "21", "23"), class = "data.frame")
+# Surrogate Log Linear Model: Example
+detg <- read.csv("./Purdue_STAT526/detg.csv")
+detg1 <- read.csv("./Purdue_STAT526/detg1.csv")
 
-# Soft = softness of the water`
-# Temp = temperature of water`
+# Soft = softness of the water
+# Temp = temperature of water
 # M.user = whether the user uses the M brands or not
 # all covariates are categorical
 detg
 is.ordered(detg$Soft)
 
+# Set default contrasts
+# what does this do?<----------------------------------------------------------????
+# http://faculty.nps.edu/sebuttre/home/r/contrasts.html
 options(contrasts = c("contr.treatment", "contr.treatment"))
 
+# what does this mean? why are they meaningless here?<----------------------------------------------------------????
 # full interaction of X margins gives us the alpha and only y for additive. Everything else are α (meaningless here)
 detg.m0 <- glm(Fr ~ M.user * Temp * Soft + Brand, poisson, detg)
+
+# modeling with only a constant
 # 2 * 2 * 3 = 12 combinations
+# what does this model tell us?? <----------------------------------------------------------????
 detg1.m0 <- glm(cbind(X, M) ~ 1, family = binomial, data = detg1)
 
 # we are interested in only aything related to y = BrandM
 # all x are discrete. all interaction of x in the model achieve
+# why these two different models' residual deviance are same?? <----------------------------------------------------------????
 detg.m0
 detg1.m0
 
-# stepwise with AIC 
+# stepwise with AIC
 detg.step <- step(detg.m0, scope = list(lower = ~., upper = ~.^2))
 detg.step
 
@@ -245,36 +199,48 @@ detg.step
 detg1.step <- step(detg1.m0, trace = F, scope = list(upper = ~ M.user * Temp * Soft))
 detg1.step
 
-detg.log <- glm(terms(Fr ~ M.user * Temp * Soft + Brand * M.user * Temp, keep.order = T),family = poisson, data = detg) # nolint
+# surrogate model?? <----------------------------------------------------------????
+# what is the purpose of this model??  <----------------------------------------------------------????
+detg.log <- glm(terms(Fr ~ M.user * Temp * Soft + Brand * M.user * Temp, keep.order = T), family = poisson, data = detg)
 detg.log
 
-# should be the same as detg.
+# should be the same as detg1.step
+## why they are the same??  <----------------------------------------------------------????
 detg.lgt <- update(detg1.m0, ~ + M.user * Temp)
 
 # messy here but what we need to do is not fitting the model but 
 # this approach allows us to find the multivariate discrete Y
 summary(detg.log)
+# why detg.lgt has better AIC?? meaning detg.log has too many unncessary parameters? <----------------------------------------------------------????
 summary(detg.lgt)
 
-# change the environment
-options(contrasts = c("contr.treatmment", "contr.treatmment"))
-det.log = update(det.log)
-
-# change everything
+# change the environment 
+# what happens?? <----------------------------------------------------------????
 options(contrasts = c("contr.sum", "contr.sum"))
+det.log <- update(detg.log)
+
+
+# Multivariate Responses: Examples
 
 # i = 1~6, j = 1~4
+# surrogate model?? <----------------------------------------------------------????
 detg.mm0 <- glm(Fr ~ Temp * Soft + Brand + M.user, poisson, detg)
 # stepwise
 step(detg.mm0, list(lower = ~., upper = ~.^3))
 
-# outcome is the same as stepwise but we 
-detg.mm<-glm(terms(Fr ~ Temp * Soft + Brand * M.user + Temp:Brand, keep.order = TRUE), poisson, detg)
+
+# outcome is the same as stepwise why?? <----------------------------------------------------------????
+detg.mm <- glm(terms(Fr ~ Temp * Soft + Brand * M.user + Temp:Brand, keep.order = TRUE), poisson, detg)
+
+summary(detg.mm)
+drop1(detg.mm)
+anova(detg.mm)
 
 ee <- fitted(detg.mm, "res")
-# expected Poisson Count
+# expected Poisson Count = 24 counts
 ee
 
+# store data in two dimensions
 ee <- array(ee, c(2, 2, 2, 3))
 ee
 
@@ -302,6 +268,62 @@ ee[, , 2, 1] / jk[2, 1]
 log(ee[1, 1, 1, 1] * ee[2, 2, 1, 1] / ee[1, 2, 1, 1] / ee[2, 1, 1, 1])
 # change the temp level but the log-odds ratio is still same
 log(ee[1, 1, 2, 1] * ee[2, 2, 2, 1] / ee[1, 2, 2, 1] / ee[2, 1, 2, 1])
+
+
+# Multivariate Responses: Examples
+
+miners <- read.csv("./Purdue_STAT526/miners.csv")
+miners0 <- read.csv("./Purdue_STAT526/miners0.csv")
+
+x <- miners0
+plot(log((x[, 2] + x[, 3] + .5) / (x[, 4] + x[, 5] + .5)))
+plot(log((x[, 2] + x[, 4] + .5) / (x[, 3] + x[, 5] + .5)))
+plot(log((x[, 2] + .5) * (x[, 5] + .5) / (x[, 3] + .5) / (x[, 4] + .5)))
+
+options(contrast = c("contr.treatment", "contr.treatment"))
+# why -1?? <-----------------------------------------------------------------------------------------------------????
+fit <- glm(Fr ~ Group + (Breath * Wheeze) * Age - 1, poisson, miners)
+summary(fit)
+
+# Fitting Distributions via Log Linear Models
+boys <- read.csv("./Purdue_STAT526/boys.csv")
+
+# modeling
+# https://bit.ly/3yeBfXj
+## lchoose() function computes the natural logarithm of combination function
+boys.log <- glm(fr ~ boy, poisson, boys, offset = lchoose(6, boy))
+boys.log
+## set the prior weights on Frequency
+boys.lgt <- glm(cbind(boy, girl) ~ 1, binomial, boys, weights = fr)
+boys.lgt
+
+# these two below are same
+predict(boys.log, type = "res") / 72069
+## plogis = ロジスティック分布の累積分布関数, dbinom = 二項分布の確率質量関数
+dbinom(0:6, 6, plogis(boys.lgt$coef))
+sum(resid(boys.log, "pear")^2) / 72069
+
+# toward the end, it gets positive, but the middle it becomes negative. so we may need quadratic form.
+plot(0:6, resid(boys.log, "work"))
+boys.log2 <- glm(fr ~ boy + I(boy^2), poisson, boys, off = lchoose(6, boy))
+boys.log2
+# this one is more civilized
+sum(resid(boys.log2, "pear")^2)
+
+prob<-predict(boys.log2,type="res")/72069
+mu <- sum((0:6)*prob)
+mu
+#p
+#6*p
+# 
+sigmasq<-sum((0:6)^2*prob)-mu^2
+sigmasq
+
+# with only 6 parameters, this overdispersion is ignorable but with a large number of sample size, we cannot 
+disp <- sigmasq/ (6*mu/6*(1-mu/6))
+disp
+sum(resid(boys.lgt,type="pear")^2)/72068
+
 
 
 
