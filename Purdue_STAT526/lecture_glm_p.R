@@ -3,6 +3,9 @@ library("stats")
 library("foreign")
 library("MASS")
 
+# set the 
+setwd("/Users/satoshiido/Documents/statistical-analysis/")
+
 data(ships, package = "MASS")
 ships$year <- factor(ships$year)
 class(ships$year)
@@ -39,7 +42,6 @@ ships.log1$df.residual
 ships.nb <- update(ships.log, family = neg.bin(20))
 summary(ships.nb)
 
-# are these two below the exactly same? <----------------------------------------------------------????
 ships.nb1 <- glm.nb(incidents ~ type + year + period + log(service), data = ships, subset = service > 0)
 ships.nb2 <- glm.nb(ships.log0)
 ## the correlation matrix of the estimated parameters is returned and printed
@@ -82,8 +84,11 @@ sum(resid(HairEye.fit, "pear")^2)
 
 
 # Mover-Stayer Model
+# assuming two independent groups
+
 
 # read csv files
+getwd()
 Migration <- read.csv("./Purdue_STAT526/Migration.csv")
 
 # return diagonal of 1:4
@@ -98,19 +103,23 @@ M.S.fit <- glm(Fr ~ stay + move66 + move71, poisson, Migration)
 
 # get the predicted number of movers on the diagnol
 predict(M.S.fit, type = "res", data.frame(stay = as.factor(0), move66 = "CC", move71 = "CC"))
+
+# this is the independent prediction excluding the diagnol
+# percentage of each cell's movers compared to the total
 jk9 <- predict(M.S.fit, 
             data.frame(
                 move66 = Migration$move66,
                 move71 = Migration$move71,
-                stay = as.factor(0),
+                stay = as.factor(0)),
                 type = "res"
-                )
             )
 
 jk8 <- matrix(jk9, 4, 4)
 jk8[, 1] / jk8[, 2]
 
 # what does this percentage tell us?  <----------------------------------------------------------????
+# estimated 7 % of total are movers and rest are stayer = 93 % of people are stayers
+# rating agrees with each other or not. diagnol is dominant how much they are agree
 sum(jk9) / sum(Migration$Fr)
 
 matrix(fitted(M.S.fit, "res"), 4, 4)
@@ -118,7 +127,7 @@ matrix(resid(M.S.fit, "res"), 4, 4)
 
 
 # Square Table: Symmetry
-
+# test whether Pij = Pji
 # what does these numbers? are these just random numbers <----------------------------------------------------------????
 Migration$symm <- as.factor(c(0, 12, 13, 14, 12, 0, 23, 24, 13, 23, 0,34, 14, 24, 34, 0))
 matrix(Migration$symm, 4, 4)
@@ -127,10 +136,12 @@ matrix(Migration$symm, 4, 4)
 glm(Fr ~ stay + symm, poisson, Migration)
 matrix(Migration$stay, 4, 4)
 # what does this percentage tell us?  <----------------------------------------------------------????
+# if the model is good fit, thre residual deviance follows the X^2 distribution with df of 6. Upper tail = p-value
 1 - pchisq(9.128, 6)
 
 # macnemar test determines if there is a statistically significant difference in proportions between paired data
 # if two off-diagnoal is the same (looking at the two cell at the same time), expected
+# pearson residuals over df Σ(O - E)^2 /E (= pearson residual ~ X^2)
 mcnemar.test(matrix(Migration$Fr, 4, 4))
 
 # is this Pearson X^2 statistics?? <----------------------------------------------------------????
@@ -170,12 +181,12 @@ detg
 is.ordered(detg$Soft)
 
 # Set default contrasts
-# what does this do?<----------------------------------------------------------????
 # http://faculty.nps.edu/sebuttre/home/r/contrasts.html
 options(contrasts = c("contr.treatment", "contr.treatment"))
 
 # what does this mean? why are they meaningless here?<----------------------------------------------------------????
 # full interaction of X margins gives us the alpha and only y for additive. Everything else are α (meaningless here)
+# equivalenty between Poisson and Multinomial observed total, for individual x, brand is only my response
 detg.m0 <- glm(Fr ~ M.user * Temp * Soft + Brand, poisson, detg)
 
 # modeling with only a constant

@@ -1,33 +1,28 @@
+# Dose Response Models
+
+x <- (-150:150) / 25
+
+# logistic function curve
+plot(x, 1 - 1 / (1 + exp(x)), type = "l", ylab = "p")
+
+# cumulative probability
+lines(x, pnorm(x), col = 2)
+# C log-log link function Extreme value family
+lines(x, 1 - exp(-exp(x)), col = 3)
+
+lines(c(-6, 6), c(.5, .5), lty = 2, col = 1)
+
+# cumulative probability with sd = 1.7
+lines(x, pnorm(x, sd = 1.7), col = 6)
+
+
 # Binomial Family
 # budworm data input from MASS book
-"budworm" <-
-structure(list(
-        numdead = c(1, 4, 9, 13, 18, 20, 0, 2, 6, 10, 12, 16),
-        ldose = c(0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5),
-        sex = structure(c(2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1), .Label = c("F", "M"), class = "factor"),
-        SF = structure(c(1, 4, 9, 13, 18, 20, 0, 2, 6, 10, 12, 16, 19, 16, 11, 7, 2, 0, 20, 18, 14, 10, 8, 4), 
-        .Dim = c(12, 2))), 
-        .Names = c("numdead", "ldose", "sex", "SF"),
-        row.names = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"), 
-        class = "data.frame")
+budworm <- read.csv("./Purdue_STAT526/budworm.csv")
+budworm2 <- read.csv("./Purdue_STAT526/budworm2.csv")
 
-"budworm2" <-
-structure(list(ldose = c(0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 
-0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5), sex = structure(c(2, 2, 
-2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 
-1), .Label = c("F", "M"), class = "factor"), Fr = c(1, 4, 9, 
-13, 18, 20, 0, 2, 6, 10, 12, 16, 19, 16, 11, 7, 2, 0, 20, 18, 
-14, 10, 8, 4), dead = structure(c(2, 2, 2, 2, 2, 2, 2, 2, 2, 
-2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), .Label = c("0", 
-"1"), class = "factor"), id = structure(c(1, 2, 3, 4, 5, 6, 7, 
-8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), .Label = c("1", 
-"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"), class = "factor")), .Names = c("ldose", 
-"sex", "Fr", "dead", "id"), row.names = c("1", "2", "3", "4", 
-"5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", 
-"16", "17", "18", "19", "20", "21", "22", "23", "24"), class = "data.frame")
 
-budworm
-budworm2
+
 # https://bit.ly/3kgkiID
 # https://bit.ly/3IeQdBq
 # https://bit.ly/3EkTe22
@@ -39,6 +34,7 @@ budworm2
 budwm.lgt0 <- glm(SF ~ ldose * sex, family = binomial, data = budworm)
 budwm.lgt0
 
+# weight = 重み`weights`を使った重みつき最小自乗法 (つまり sum(w*e^2) を最小化する) が使われる
 budwm.lgt1 <- update(budwm.lgt0, numdead / 20 ~ ., weight = rep(20, 12))
 budwm.lgt1
 
