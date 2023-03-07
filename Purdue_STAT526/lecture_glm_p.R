@@ -3,7 +3,7 @@ library("stats")
 library("foreign")
 library("MASS")
 
-# set the 
+# set the working directory
 setwd("/Users/satoshiido/Documents/statistical-analysis/")
 
 data(ships, package = "MASS")
@@ -80,6 +80,7 @@ HairEye.fit <- glm(Fr ~ . ^2, poisson, HairEye)
 HairEye.fit
 # stepwise to select the parameters
 drop1(HairEye.fit)
+# pearson's residual statistics
 sum(resid(HairEye.fit, "pear")^2)
 
 
@@ -117,7 +118,6 @@ jk9 <- predict(M.S.fit,
 jk8 <- matrix(jk9, 4, 4)
 jk8[, 1] / jk8[, 2]
 
-# what does this percentage tell us?  <----------------------------------------------------------????
 # estimated 7 % of total are movers and rest are stayer = 93 % of people are stayers
 # rating agrees with each other or not. diagnol is dominant how much they are agree
 sum(jk9) / sum(Migration$Fr)
@@ -144,7 +144,7 @@ matrix(Migration$stay, 4, 4)
 # pearson residuals over df Σ(O - E)^2 /E (= pearson residual ~ X^2)
 mcnemar.test(matrix(Migration$Fr, 4, 4))
 
-# is this Pearson X^2 statistics?? <----------------------------------------------------------????
+# Pearson X^2 statistics
 sum(resid(glm(Fr ~ stay + symm, poisson, Migration), type = "pear")^2)
 
 # Surrogate Log Linear Model: Example (Binomial Family)
