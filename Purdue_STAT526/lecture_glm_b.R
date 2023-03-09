@@ -139,5 +139,36 @@ predict(boys.fit, type = "res")
 # boys ratio
 p <- sum(boys$fr * (0:6)) / sum(boys$fr) / 6
 
-# Pearson's X^2 statistics over 
+# the Over-dispersion = Pearson's X^2 statistics / (n-p)
 sum(resid(boys.fit, type = "pear")^ 2) / (sum(boys$fr) - 1)
+
+# Residual Analysis
+budworm
+budwm.lgt
+## Deviance and Pearson residuals are often very similar
+## Deviance residuals
+res.dev <- resid(budwm.lgt)
+## Pearson residuals
+res.pear <- resid(budwm.lgt, type = "pear")
+
+plot(res.dev, pch = as.character(budworm$sex))
+points(res.pear, pch = as.character(budworm$sex), col = 2)
+qqnorm(res.dev)
+qqnorm(res.pear)
+
+# check for possible nonlinearity
+# Working residual
+res.work <- resid(budwm.lgt, type = "work")
+
+# seems there is nonlinearity
+plot(budworm$ldose, res.work, pch = as.character(budworm$sex))
+abline(h = 0, lty = 2)
+
+# Terms Predictions and Partial Residuals
+res.work + predict(budwm.lgt, type = "term")
+resid(budwm.lgt, type = "part")
+
+
+# Regression Diagnostics
+plot(budwm.lgt)
+influence.measures(budwm.lgt)
