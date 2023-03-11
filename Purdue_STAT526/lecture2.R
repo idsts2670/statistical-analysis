@@ -30,3 +30,6 @@ drop1(cats2)
 
 data(budworm)
 budworm; budwm.lgt; res.dev <- resid(budwm.lgt)
+
+
+
