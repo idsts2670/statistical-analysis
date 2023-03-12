@@ -1,0 +1,81 @@
+---
+title: "STAT 526 HW 4"
+author: "Satoshi Ido (ID: 34788706)"
+date: 20 March 2023
+output: pdf_document
+---
+
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+
+```{r}
+library("MASS")
+library("lmtest")
+data(minn38)
+minn38
+```
+
+# Problem 1
+```{r}
+options(contrasts = c("contr.treatment", "contr.treatment"))
+m0 <- glm(f ~ hs * fol * sex + phs, family = poisson, minn38)
+
+# stepwise
+step(m0, list(lower = ~ ., upper = ~.^2))
+# best model on AIC
+m1 <- glm(formula = f ~ hs + fol + sex + phs + hs:fol + hs:sex + fol:sex + 
+    fol:phs + hs:phs + sex:phs + hs:fol:sex + fol:sex:phs + hs:fol:phs, 
+    family = poisson, data = minn38)
+
+# nearby models
+## no term is worth being dropped
+drop1(m1)
+## didnt see phs:hs:sex term so add it to the model
+## seems like AIC increases a little yet, its size is not large and Deviance decreases in the new model
+add1(m1, ~. + phs:hs:sex)
+m1_add <- glm(formula = f ~ hs + fol + sex + phs + hs:fol + hs:sex + fol:sex + 
+    fol:phs + hs:phs + sex:phs + hs:fol:sex + fol:sex:phs + hs:fol:phs + phs:hs:sex, 
+    family = poisson, data = minn38)
+
+# they fit the data equally well, in terms of the model, either method will work
+# complex model is not significantly more accurate under an alpha equal to .05
+lrtest(m1, m1_add)
+
+# summary
+summary(m1_add)
+```
+
+# Problem 2
+```{r}
+options(contrasts = c("contr.treatment", "contr.treatment"))
+m2 <- glm(f ~ fol * sex + phs + hs, family = poisson, minn38)
+
+# stepwise
+step(m2, list(lower = ~ ., upper = ~.^2))
+# best model on AIC
+m3 <- glm(formula = f ~ fol + sex + phs + hs + fol:sex + fol:phs + 
+    phs:hs + sex:hs + sex:phs + fol:hs + fol:sex:phs, family = poisson, 
+    data = minn38)
+
+# nearby models
+## hs:fol term and fol:sex:phs term can be dropped since AIC increases a little
+drop1(m3)
+## seems like AIC and deviance decrease with fol:phs:hs term and sex:phs:hs also does not hurt the model and deviance decreases
+add1(m3, ~. + sex:hs:phs + fol:hs:phs)
+m3_add <- glm(formula = f ~ fol + sex + phs + hs + fol:sex + fol:phs + 
+    phs:hs + sex:hs + sex:phs + fol:hs + fol:sex:phs + sex:hs:phs + fol:hs:phs, family = poisson, 
+    data = minn38)
+
+# the new model fits differently
+# the complex model fits better.
+# Thus, we know that we should definitely use the complex model as it increases the accuracy of our model by a substantial amount
+lrtest(m3, m3_add)
+
+# summary
+summary(m3_add)
+```
