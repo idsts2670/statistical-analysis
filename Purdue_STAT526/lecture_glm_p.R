@@ -236,11 +236,10 @@ det.log <- update(detg.log)
 # i = 1~6, j = 1~4
 # surrogate model?? <----------------------------------------------------------????
 detg.mm0 <- glm(Fr ~ Temp * Soft + Brand + M.user, poisson, detg)
+
 # stepwise
 step(detg.mm0, list(lower = ~., upper = ~.^3))
-
-
-# outcome is the same as stepwise why?? <----------------------------------------------------------????
+# the best model based on stepwise with AIC
 detg.mm <- glm(terms(Fr ~ Temp * Soft + Brand * M.user + Temp:Brand, keep.order = TRUE), poisson, detg)
 
 summary(detg.mm)
