@@ -1,0 +1,38 @@
+---
+title: "STAT 526 HW 5"
+author: "Satoshi Ido (ID: 34788706)"
+date: 20 March 2023
+output: pdf_document
+---
+
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+```{r}
+library("MASS")
+library("lmtest")
+```
+
+```{r}
+df <- data.frame(
+                x = 0:15,
+                fr = c(57, 203, 383, 525, 532, 408, 273, 139,
+                    45, 27, 10, 4, 0, 1, 1, 0))
+m0 <- glm(
+        fr ~ x, family = poisson,
+        offset = -lgamma(x + 1), subset = x < 12, data = df)
+
+m1 <- glm(
+        fr ~ x, family = poisson,
+        offset = -log(factorial(x)), subset = x < 12, data = df)
+
+# X^2 test to see if the observed values and expected values are the same
+1 - pchisq(sum(resid(m0, "pear")^2), 10)
+
+# the residual plot shows the normality assumption is violated
+plot(fitted(m0), resid(m0), main = "Residual plot")
+```
