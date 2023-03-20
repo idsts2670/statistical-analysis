@@ -62,7 +62,7 @@ plot(fitted(m1), resid(m1), main = "Residual plot")
 df2 <- data.frame(
                 # use the medium of the range
                 x = c(10, 30, 50, 70, 90, 110, 130, 170, 230, 290, 350, 410, 470),
-                w = rep(c(20, 60), c(7, 6)),
+                t = rep(c(20, 60), c(7, 6)),
                 fr = c(28, 20, 17, 11, 14, 6, 13, 17, 16, 11, 13, 3, 4)
                 )
 ```
@@ -75,11 +75,24 @@ glm(fr ~ x, family = poisson, data = df2, offset = log(w))
 
 ## Poisson constant model
 ```{r}
-m2 <- glm(rep(x, fr) ~ 1, family = poisson, data = df2, offset = log(rep(x, fr)))
+m2 <- glm(rep(x, fr) ~ 1, family = poisson, data = df2)
 
 # X^2 test to see if the observed values and expected values are the same
 1 - pchisq(sum(resid(m2, "pear")^2), 172)
 
 # the residual plot shows the normality assumption is violated
 plot(fitted(m2), resid(m2), main = "Residual plot")
+```
+
+## Poisson surrogate model
+```{r}
+m3 <- glm(
+        fr ~ x, family = poisson,
+        offset = log(t), data = df2)
+
+# X^2 test to see if the observed values and expected values are the same
+1 - pchisq(sum(resid(m3, "pear")^2), 11)
+
+# the residual plot shows the normality assumption is violated
+plot(fitted(m3), resid(m3), main = "Residual plot")
 ```
