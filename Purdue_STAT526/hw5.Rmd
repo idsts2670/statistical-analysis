@@ -17,22 +17,57 @@ library("MASS")
 library("lmtest")
 ```
 
+# 1
+# dataframe
 ```{r}
 df <- data.frame(
                 x = 0:15,
                 fr = c(57, 203, 383, 525, 532, 408, 273, 139,
                     45, 27, 10, 4, 0, 1, 1, 0))
-m0 <- glm(
-        fr ~ x, family = poisson,
-        offset = -lgamma(x + 1), subset = x < 12, data = df)
 
-m1 <- glm(
-        fr ~ x, family = poisson,
-        offset = -log(factorial(x)), subset = x < 12, data = df)
+```
 
-# X^2 test to see if the observed values and expected values are the same
-1 - pchisq(sum(resid(m0, "pear")^2), 10)
+# Poisson constant model
+```{r}
+m0 <- glm(rep(x, fr) ~ 1, family = poisson, data = df)
+# Most commonly, weights in R are interpreted as frequency weights
+m0 <- glm(x ~ 1, family = poisson, weight = fr, data = df)
+
+# X^2 test to see if there is overdispersion
+1 - pchisq(sum(resid(m0, "pear")^2), 13)
 
 # the residual plot shows the normality assumption is violated
 plot(fitted(m0), resid(m0), main = "Residual plot")
+```
+
+# Poisson surrogate model
+```{r}
+
+m1 <- glm(
+        fr ~ x, family = poisson,
+        # offset = -log(factorial(x))
+        offset = -lgamma(x + 1), subset = x < 12, data = df)
+
+# X^2 test to see if the observed values and expected values are the same
+1 - pchisq(sum(resid(m1, "pear")^2), 10)
+
+# the residual plot shows the normality assumption is violated
+plot(fitted(m1), resid(m1), main = "Residual plot")
+```
+
+# 2
+# dataframe
+```{r}
+df2 <- data.frame(
+                # use the medium of the range
+                x = c(10, 30, 50, 70, 90, 110, 130, 170, 230, 290, 350, 410, 470),
+                w = rep(c(20, 60), c(7, 6)),
+                fr = c(28, 20, 17, 11, 14, 6, 13, 17, 16, 11, 13, 3, 4)
+                )
+```
+
+
+```{r}
+# set the range width as the 
+glm(fr ~ x, family = poisson, data = df2, offset = log(w))
 ```

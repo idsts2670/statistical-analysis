@@ -320,19 +320,19 @@ boys.log2
 # this one is more civilized
 sum(resid(boys.log2, "pear")^2)
 
-prob<-predict(boys.log2,type="res")/72069
-mu <- sum((0:6)*prob)
+prob <- predict(boys.log2, type = "res")/72069
+mu <- sum((0:6) * prob)
 mu
 #p
 #6*p
 # 
-sigmasq<-sum((0:6)^2*prob)-mu^2
+sigmasq <- sum((0:6)^2 * prob) - mu^2
 sigmasq
 
 # with only 6 parameters, this overdispersion is ignorable but with a large number of sample size, we cannot 
-disp <- sigmasq/ (6*mu/6*(1-mu/6))
+disp <- sigmasq/ (6 * mu / 6 * (1 - mu/6))
 disp
-sum(resid(boys.lgt,type="pear")^2)/72068
+sum(resid(boys.lgt, type = "pear")^2) / 72068
 
 
 
@@ -350,12 +350,12 @@ fr <- c(fr, rep(0, 21 - n))
 
 dat <- data.frame(y = 0:20, fr = fr)
 # Coefficients values are same in below
-glm(y ~ 1, poisson, dat, wei = fr)
+glm(y ~ 1, family = poisson, dat, weights = fr)
 log(sum((0:20) * fr) / 1000)
 
 # using surrogate poisson model to one way table
 # The first 14 cells following Poisson, but the latter 7 cells not following Poisson
-glm(fr ~ y, poisson, dat, off = -lgamma(y + 1))
+glm(fr ~ y, family = poisson, dat, offset = -lgamma(y + 1))
 
 # truncated poisson
-glm(fr ~ y, poisson, dat[2:21, ], off = -lgamma(y + 1))
+glm(fr ~ y, family = poisson, dat[2:21, ], offset = -lgamma(y + 1))
