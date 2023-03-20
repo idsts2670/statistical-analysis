@@ -16,11 +16,21 @@ knitr::opts_chunk$set(
 ```{r}
 library("MASS")
 library("lmtest")
+library("dplyr")
+library("data.table")
 data(minn38)
-minn38
+head(minn38)
+attach(minn38)
 ```
 
 # Problem 1
+```{r}
+# number of schools
+id_column <- paste(hs, fol, sex, sep = "_")
+minn38$id_column_1 <- id_column
+minn38 <- minn38[order(id_column), ]
+table(minn38$id_column_1)
+```
 ```{r}
 options(contrasts = c("contr.treatment", "contr.treatment"))
 m0 <- glm(f ~ hs * fol * sex + phs, family = poisson, minn38)
@@ -31,6 +41,8 @@ step(m0, list(lower = ~ ., upper = ~.^2))
 m1 <- glm(formula = f ~ hs + fol + sex + phs + hs:fol + hs:sex + fol:sex + 
     fol:phs + hs:phs + sex:phs + hs:fol:sex + fol:sex:phs + hs:fol:phs, 
     family = poisson, data = minn38)
+# anova
+anova(m1)
 
 # nearby models
 ## no term is worth being dropped
@@ -48,19 +60,50 @@ lrtest(m1, m1_add)
 
 # summary
 summary(m1_add)
+
+# prediction
+minn38$m1_add <- predict(m1_add, type = "res")
+
+# get the cell probabilities
+predicted_prob <-
+            minn38 %>%
+            group_by(id_column_1) %>%
+            summarise(prob = m1_add / sum(m1_add))
+
+# add the probabilities to the original dataset
+minn38$predicted_prob <- predicted_prob$prob
+# expand the dataframe to data.table
+minn38_table <- data.table(minn38)
+
+qq <- dcast(minn38_table, id_column_1  ~ phs, value.var = "predicted_prob")
+# copy the probabilities data
+clipr::write_clip(qq)
 ```
 
 # Problem 2
+```{r}
+# reset the dataframe
+data(minn38)
+head(minn38)
+
+# number of schools
+id_column <- paste(hs, fol, sex, sep = "_")
+minn38$id_column_1 <- id_column
+minn38 <- minn38[order(id_column), ]
+table(minn38$id_column_1)
+```
 ```{r}
 options(contrasts = c("contr.treatment", "contr.treatment"))
 m2 <- glm(f ~ fol * sex + phs + hs, family = poisson, minn38)
 
 # stepwise
-step(m2, list(lower = ~ ., upper = ~.^2))
+step(m2, list(lower = ~ ., upper = ~.^3))
 # best model on AIC
 m3 <- glm(formula = f ~ fol + sex + phs + hs + fol:sex + fol:phs + 
     phs:hs + sex:hs + sex:phs + fol:hs + fol:sex:phs, family = poisson, 
     data = minn38)
+# anova
+anova(m3)
 
 # nearby models
 ## hs:fol term and fol:sex:phs term can be dropped since AIC increases a little
@@ -78,4 +121,22 @@ lrtest(m3, m3_add)
 
 # summary
 summary(m3_add)
+
+# prediction
+minn38$m3_add <- predict(m3_add, type = "res")
+
+# get the cell probabilities
+predicted_prob <-
+            minn38 %>%
+            group_by(fol, sex) %>%
+            summarise(prob = m3_add / sum(m3_add))
+
+# add the probabilities to the original dataset
+minn38$predicted_prob <- predicted_prob$prob
+# expand the dataframe to data.table
+minn38_table <- data.table(minn38)
+
+qq <- dcast(minn38_table, id_column_1  ~ phs + hs, value.var = "predicted_prob")
+# copy the probabilities data
+clipr::write_clip(qq)
 ```
