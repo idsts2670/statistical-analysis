@@ -1,0 +1,81 @@
+---
+title: "STAT 527 HW 7"
+author: "Satoshi Ido (ID: 34788706)"
+date: 27 March 2023
+output: pdf_document
+---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+
+
+```{r}
+# data prep
+library("lattice")
+library("dplyr")
+data(mtcars)
+head(mtcars)
+```
+
+Q1. Plot the density plot of the Weight (1000 lbs) of the cars with the function densityplot().
+```{r, out.width = "70%"}
+# the density plot of Weight
+attach(mtcars)
+densityplot( ~ wt,
+        xlab = "Weight (1000 lbs)",
+        ylab = "Kernel Density",
+        plot.points = FALSE
+    )
+```
+
+Q2. Add a new column transmission to the data frame mtcars. The new column should be a factor vector, each element labeled Automatic or Manual according to the Transmission type (already given in one of the data columns).
+```{r, out.width = "70%"}
+mtcars <- transform(
+                mtcars,
+                transmission = ifelse(
+                    am == 0, "Automatic", "Manual"
+                )
+            )
+# change the data type from the character into the factor
+mtcars$transmission <- as.factor(mtcars$transmission)
+head(mtcars$transmission)
+class(mtcars$transmission)
+```
+
+Q3. Use barchart() to compare the number of vehicles with the two different transmission types.
+```{r, out.width = "70%"}
+barchart(
+        mtcars$transmission,
+        horiz = TRUE,
+        main = "the number of vehicles with different transmission types",
+        xlab = "the number of vehicles",
+        ylab = "transmission types",
+        col = "grey"
+    )
+```
+
+Q4. Use xyplot() to explore the relation between Miles per Gallon and Weight (1000 lbs), grouped by transmission.
+```{r, out.width = "70%"}
+xyplot(
+    mpg ~ wt,
+    data = mtcars,
+    groups = transmission,
+    xlab = "Weight (1000 lbs)",
+    ylab = "Miles per Gallon",
+    main = "the relation between Miles per Gallon and Weight (1000 lbs)"
+    )
+```
+
+Q5. Use bwplot() to explore the distribution of Miles per Gallon, grouped by transmission
+```{r, out.width = "70%"}
+attach(mtcars)
+bwplot(mpg,
+    by = transmission,
+    xlab = "Miles per Gallon",
+    main = "the distribution of Miles per Gallon grouped by transmission"
+    )
+```
