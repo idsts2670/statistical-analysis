@@ -73,8 +73,7 @@ xyplot(
 Q5. Use bwplot() to explore the distribution of Miles per Gallon, grouped by transmission
 ```{r, out.width = "70%"}
 attach(mtcars)
-bwplot(mpg,
-    by = transmission,
+bwplot(mpg ~ transmission,
     xlab = "Miles per Gallon",
     main = "the distribution of Miles per Gallon grouped by transmission"
     )
