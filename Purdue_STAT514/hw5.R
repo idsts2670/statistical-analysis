@@ -50,13 +50,15 @@ df3 %>%
 
 # Assumption check
 ## density plot
-hist(df$strength, col = "gray", prob = TRUE, main = "Histogram with Density plot")
+hist(df$strength, col = "gray", prob = TRUE, 
+    main = "Histogram with Density plot")
 lines(density(df$strength))
 
 ## check normality assumption
 qqnorm(df$strength, pch = 1, main = "Normal QQ-plot")
 qqline(df$strength)
-                
+
+
 ## Shapiro-Wilk normality test
 shapiro.test(df$strength)
 

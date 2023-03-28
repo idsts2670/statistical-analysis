@@ -114,11 +114,43 @@ foo
 
 
 # for hw 6
-# moose.density=c(.17,.23,.23,.26,.37,.42,.66,.80,1.11,1.30,1.37,1.41,1.73,2.49)
-# kill.rate=c(.37,.47,1.90,2.04,1.12,1.74,2.78,1.85,1.88,1.96,1.80,2.44,2.81,3.75)
-# plot(moose.density,kill.rate,type="p")
-# m=2.5*(0:100)/100
-# a=3.37
-# b=0.47
-# k=a*m/(b+m)
-# points(m,k,type="l")
+
+
+# review for the midterm
+'pp'
+
+
+# Q2
+my.circle <- function(mu.x = 0, mu.y = 0, r = 1, N = 500, ...){
+  r <- abs(r)
+  x <- mu.x + seq(-r, r, length = N)
+  y <- mu.y + sqrt(r^2 - (x - mu.x)^2)
+  #lines(x, y)
+  #lines(x, -y)
+  lines(c(x, rev(x)), c(y, rev(mu.y - sqrt(r^2 - (x - mu.x)^2))), ...)
+}
+plot(c(-10, 10), c(-10, 10), type = "n")
+my.circle(r = 5, col = "red")
+my.circle(r = 5, col = "red", lwd = 4)
+
+# Q3
+func <- function(x){
+  a <- x + 2
+  print(parent.frame())
+
+  env <- environment()
+  search_list <- list()
+
+  print(env)
+  i <- 0
+  while(! identical(env, emptyenv())){
+    i <- i + 1
+    search_list[[i]] <- env
+    env <- parent.env(env)
+
+  }
+  search_list
+  #return(search_list)
+}
+
+func(2)
