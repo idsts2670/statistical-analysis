@@ -4,7 +4,7 @@ library("grid")
 library("gridExtra")
 
 #Q1
-## ANOVA
+# ANOVA
 df <- data.frame(
             agents = c(rep(1, 5), rep(2, 5), rep(3, 5), rep(4, 5)),
             bolts = rep(c(1, 2, 3, 4, 5), times = 4),
@@ -14,9 +14,9 @@ df <- data.frame(
 df$agents <- as.factor(df$agents)
 df$bolts <- as.factor(df$bolts)
 
-## ANOVA
-res.aov <- aov(strength ~ agents + bolts, data = df)
-summary(res.aov)
+# ANOVA
+model <- aov(strength ~ agents + bolts, data = df)
+summary(model)
 
 # break down the ANOVA
 ## grand mean
@@ -40,11 +40,13 @@ df %>%
 
 ## diff by each cell -> SSE
 ## merge by agents column
-df2 <- merge(df, df_agents[, c(1, 2)], by = "agents")
-df3 <- merge(df2, df_bolts[, c(1, 2)], by = "bolts")
-df3 %>%
-    mutate(diff_sqr = (strength - means.x - means.y + mean(strength))^2) %>%
-        mutate(diff_sum = sum(diff_sqr))
+tmp1 <- merge(df, df_agents[, c(1, 2)], by = "agents")
+tmp2 <- merge(tmp1, df_bolts[, c(1, 2)], by = "bolts")
+tmp2 %>%
+    mutate(
+        diff_sqr = (strength - means.x - means.y + mean(strength))^2,
+        diff_sum = sum(diff_sqr)
+        )
 
 
 
@@ -59,8 +61,7 @@ shapiro.test(model$residuals)
 ## residual plot
 ### model prediction
 ### histogram and density plot
-# model <- lm(strength ~ agents + bolts, data = df)
-model <- aov(strength ~ agents + bolts, data = df)
+
 hist(model$residuals, col = "gray", prob = TRUE, 
     main = "Histogram with Density plot")
 lines(density(model$residuals))
@@ -97,9 +98,6 @@ pairwise.t.test(df$strength, df$agents, p.adjust.method = "bonferroni")
 
 
 # Q2
-
-# model <- lm(strength ~ agents + bolts, data = df)
-
 # dataframe
 df2 <- data.frame(
             temp = c(rep(5, 5), rep(10, 5), rep(15, 5), rep(20, 5)),
@@ -118,3 +116,74 @@ summary(model2)
 
 ## Tukey method
 TukeyHSD(model2, conf.level = .95)
+
+
+# Q3
+df3 <- data.frame(
+            detergent = c(rep(1, 3), rep(2, 3), rep(3, 3), rep(4, 3)),
+            stain = rep(c(1, 2, 3), times = 4),
+            cleaness = c(45, 43, 51, 47, 46, 52, 48, 50, 55, 42, 37, 49)
+        )
+# factorize the variables
+df3$detergent <- as.factor(df3$detergent)
+df3$stain <- as.factor(df3$stain)
+
+# ANOVA
+model3 <- aov(cleaness ~ detergent + stain, data = df3)
+summary(model3)
+
+pred <- predict(lm(cleaness ~ detergent + stain), df3, se.fit = TRUE)
+vec <- c()
+vec <- pred$fit
+vec2 <- vec^2
+df3 <- data.frame(
+            y = vec,
+            q = vec2
+        )
+
+# break down the ANOVA
+## grand mean
+attach(df3)
+mean(cleaness)
+
+## mean diff by each detergent (treatment) categories
+df3 %>% 
+    group_by(detergent) %>%
+        summarise_at(vars(cleaness), list(det_means = mean)) %>%
+            as.data.frame() -> df_detergent
+## mean diff by each stain (block) categories
+df3 %>% 
+    group_by(stain) %>%
+        summarise_at(vars(cleaness), list(means = mean)) %>%
+            as.data.frame() %>%
+                mutate(diff_sqr = (means - mean(means))^2) %>%
+                mutate(diff_sum = sum(diff_sqr)) -> df_stain
+
+## diff by each cell -> SSE
+## merge by agents column
+tmp1 <- merge(df3, df_detergent[, c(1, 2)], by = "detergent")
+tmp2 <- merge(tmp1, df_stain[, c(1, 2)], by = "stain")
+tmp2 %>%
+    mutate(
+        three_multiple = (cleaness * means.x * means.y),
+        ss = mean(cleaness) * (110.92 + 135.17 + (mean(cleaness)^2 / (3 * 2))),
+        numerator = (three_multiple - ss)^2,
+        denominator = ((3 * 2) * 110.92 * 135.17),
+        SSn = sum(numerator / denominator)
+        )
+
+tmp2 %>%
+    mutate(
+        three_multiple = (cleaness * means.x * means.y),
+        ss = mean(cleaness),
+        s =  (110.92 + 135.17 + (mean(cleaness)^2 / (3 * 2))),
+        sss = ss * s)
+tmp2 %>%
+    mutate(
+        three_multiple = (cleaness * means.x * means.y),
+        sums = sum(three_multiple),
+        ss = mean(cleaness) * (110.92 + 135.17 + (mean(cleaness)^2 / (3 * 2))),
+        numerator = (sums - ss)^2,
+        denominator = ((3 * 2) * 110.92 * 135.17),
+        SSn = sum(numerator / denominator)
+        )
