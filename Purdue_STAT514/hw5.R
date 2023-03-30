@@ -49,22 +49,22 @@ df3 %>%
 
 
 # Assumption check
-## density plot
-hist(df$strength, col = "gray", prob = TRUE, 
-    main = "Histogram with Density plot")
-lines(density(df$strength))
-
 ## check normality assumption
 qqnorm(df$strength, pch = 1, main = "Normal QQ-plot")
 qqline(df$strength)
 
-
 ## Shapiro-Wilk normality test
-shapiro.test(df$strength)
+shapiro.test(model$residuals)
 
 ## residual plot
 ### model prediction
-model <- lm(strength ~ agents + bolts, data = df)
+### histogram and density plot
+# model <- lm(strength ~ agents + bolts, data = df)
+model <- aov(strength ~ agents + bolts, data = df)
+hist(model$residuals, col = "gray", prob = TRUE, 
+    main = "Histogram with Density plot")
+lines(density(model$residuals))
+
 g_1 <- ggplot(df, aes(x = predict(model), y = model$residuals)) +
     geom_point() +
     geom_abline(intercept = 0, slope = 1) +
@@ -86,3 +86,35 @@ g_3 <- ggplot(df, aes(x = bolts, y = model$residuals)) +
 
 # multiple graph on 1 page
 grid.arrange(g_1, g_2, g_3, ncol = 2, nrow = 2)
+
+# Pairwise comparison
+## Tukey
+TukeyHSD(model, conf.level = .95)
+
+## Bonferroni
+pairwise.t.test(df$strength, df$agents, p.adjust.method = "bonferroni")
+
+
+
+# Q2
+
+# model <- lm(strength ~ agents + bolts, data = df)
+
+# dataframe
+df2 <- data.frame(
+            temp = c(rep(5, 5), rep(10, 5), rep(15, 5), rep(20, 5)),
+            oven = rep(c(1, 2, 3, 4, 5), times = 4),
+            strength = c(3, 10, 7, 4, 3, 3, 8, 12, 2, 4, 9, 
+                        13, 15, 3, 10, 7, 12, 9, 8, 13)
+            )
+
+# factorize the variables
+df2$temp <- as.factor(df2$temp)
+df2$oven <- as.factor(df2$oven)
+
+## ANOVA
+model2 <- aov(strength ~ temp + oven, data = df2)
+summary(model2)
+
+## Tukey method
+TukeyHSD(model2, conf.level = .95)
