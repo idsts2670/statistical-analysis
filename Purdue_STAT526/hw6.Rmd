@@ -40,39 +40,64 @@ m1 <- polr(hs ~ fol * sex, data = minn38, weights = f, Hess = TRUE)
 ## data
 ```{r}
 data(quine, package = "MASS")
-head(quine)
+df <- quine
+head(df)
 ```
 
 ## analysis
 ```{r}
 # fitting gamma regression model with replacing the zero counts with other small numbers
-for (i in c(0.5, 1, 1.5)) {
-    df <- quine
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    print(paste("replace 0 counts with: ", i))
-    df$Days[df$Days == 0] = i
 
+for (i in c(0.01, 0.05, 0.10)) {
+    print(paste("replace 0 counts with: ", i))
+
+    df$Days[df$Days == 0] = i
     m2 <- glm(Days ~ Eth + Sex + Age + Lrn, 
             family = Gamma(link = "log"), data = df
             )
-    m2_a <- step(m2, list(lower = ~., upper = ~.^2), k = log(146))
+    m2_a <- step(m2, list(lower = ~., upper = ~.^3), k = log(146))
     m2_b <- drop(m2_a)
     print(m2_a); print(m2_b)
 
     # just in case
-    m2_c <- update(m2_a, ~. - sex)
+    print("check the drop")
+    m2_c <- update(m2_a, ~. - Sex)
     m2_d <- update(m2_a, ~. - Age)
     m2_e <- update(m2_a, ~. - Lrn)
     m2_f <- update(m2_a, ~. - Eth)
     print(m2_c); print(m2_d); print(m2_e); print(m2_f)
+    plot(m2_a)
 }
 
+m2_f <- update(m2_a, ~. - Eth + )
+```
 
+### further comparison with lrtest
+```{r}
+print("check the drop")
+m2_c <- update(m2_a, ~. - Sex - Lrn)
+m2_d <- update(m2_a, ~. - Age - Eth)
+lrtest(m2_a, m2_c)
+lrtest(m2_a, m2_d)
+```
+
+## comparing with negative binomial model and log-normal model
+```{r}
+# negative binomial model
+data(quine, package = "MASS")
+df <- quine
+m3 <- glm.nb(Days ~ Eth + Sex + Age + Lrn, data = df)
+m3_a <- step(m3, list(lower = ~ ., upper = ~.^3))
+
+# log-normal model
+df$Days[df$Days == 0] = 0.05
+m4 <- glm(log(Days) ~ Eth + Sex + Age + Lrn, data = df)
+m4_a <- step(m4, list(lower = ~., upper = ~.^3))
+residuals(m4_a, type = c("deviance", "pearson"))
 ```
 
 ```{r}
-df <- quine
-df$Days[df$Days == 0] = 1.5
-m2 <- glm(Days ~ Eth + Sex + Age + Lrn, family = Gamma(link = "log"), data = df)
-m2_a <- step(m2, list(lower = ~., upper = ~.^2), k = log(146))
+lrtest(m2_a, m3_a)
+summary(m4_a)
+m4_a$residuals
 ```
