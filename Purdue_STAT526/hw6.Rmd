@@ -19,13 +19,14 @@ library("dplyr")
 library("data.table")
 ```
 
-# data
+# Problem1
+## data
 ```{r}
 data(minn38, package = "MASS")
 head(minn38)
 ```
 
-# analysis
+## analysis
 ```{r}
 options(contrasts = c("contr.treatment", "contr.treatment"))
 # fitting proportional odds model, cases weighted by frequency
@@ -33,4 +34,45 @@ options(contrasts = c("contr.treatment", "contr.treatment"))
 m0 <- polr(hs ~ fol + sex, data = minn38, weights = f, Hess = TRUE)
 # interaction
 m1 <- polr(hs ~ fol * sex, data = minn38, weights = f, Hess = TRUE)
+```
+
+# Problem2
+## data
+```{r}
+data(quine, package = "MASS")
+head(quine)
+```
+
+## analysis
+```{r}
+# fitting gamma regression model with replacing the zero counts with other small numbers
+for (i in c(0.5, 1, 1.5)) {
+    df <- quine
+    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    print(paste("replace 0 counts with: ", i))
+    df$Days[df$Days == 0] = i
+
+    m2 <- glm(Days ~ Eth + Sex + Age + Lrn, 
+            family = Gamma(link = "log"), data = df
+            )
+    m2_a <- step(m2, list(lower = ~., upper = ~.^2), k = log(146))
+    m2_b <- drop(m2_a)
+    print(m2_a); print(m2_b)
+
+    # just in case
+    m2_c <- update(m2_a, ~. - sex)
+    m2_d <- update(m2_a, ~. - Age)
+    m2_e <- update(m2_a, ~. - Lrn)
+    m2_f <- update(m2_a, ~. - Eth)
+    print(m2_c); print(m2_d); print(m2_e); print(m2_f)
+}
+
+
+```
+
+```{r}
+df <- quine
+df$Days[df$Days == 0] = 1.5
+m2 <- glm(Days ~ Eth + Sex + Age + Lrn, family = Gamma(link = "log"), data = df)
+m2_a <- step(m2, list(lower = ~., upper = ~.^2), k = log(146))
 ```
