@@ -1,0 +1,36 @@
+---
+title: "STAT 526 HW 6"
+author: "Satoshi Ido (ID: 34788706)"
+date: 4 April 2023
+output: pdf_document
+---
+
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+```{r}
+library("MASS")
+library("lmtest")
+library("dplyr")
+library("data.table")
+```
+
+# data
+```{r}
+data(minn38, package = "MASS")
+head(minn38)
+```
+
+# analysis
+```{r}
+options(contrasts = c("contr.treatment", "contr.treatment"))
+# fitting proportional odds model, cases weighted by frequency
+# no-interaction
+m0 <- polr(hs ~ fol + sex, data = minn38, weights = f, Hess = TRUE)
+# interaction
+m1 <- polr(hs ~ fol * sex, data = minn38, weights = f, Hess = TRUE)
+```

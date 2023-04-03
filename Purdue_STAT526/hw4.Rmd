@@ -31,6 +31,7 @@ minn38$id_column_1 <- id_column
 minn38 <- minn38[order(id_column), ]
 table(minn38$id_column_1)
 ```
+
 ```{r}
 options(contrasts = c("contr.treatment", "contr.treatment"))
 m0 <- glm(f ~ hs * fol * sex + phs, family = poisson, minn38)
