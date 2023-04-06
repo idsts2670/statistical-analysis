@@ -15,4 +15,25 @@ knitr::opts_chunk$set(
 # data prep
 library("lattice")
 library("dplyr")
+library("stringr")
+# get the data from R file
+source('Purdue_STAT527/hw8.R')
+```
+
+# Q1
+```{r}
+# extract all the words that start with “s” from the sentence
+## https://www.tohoho-web.com/ex/regexp.html#lookaround_assertion
+str_extract_all(v1, "(?<=\\b)s[^\\s]+")
+```
+
+Q2
+```{r}
+x <- as.numeric(gsub(".*?([0-9]+).*", "\\1", v2))
+x[!is.na(x)]
+```
+
+Q3
+```{r}
+gsub('cat', 'dog', v3)
 ```
