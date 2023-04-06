@@ -17,3 +17,15 @@ t <- seq(720, 1200, len = 100)
 at.risk <- outer(chan$En, t, "<=") & outer(chan$Ex, t, ">")
 plot(t, apply(at.risk, 2, sum), type = "l")
 
+
+# Asymptotic Variance of Kaplan-Meier
+library("survival")
+data(cancer)
+## time: survival or censoring time
+## status: (right) censoring status
+## x: maintenance chemotherapy given? (factor)
+aml
+## Kaplan-Meier estimate
+km <- survfit(Surv(time, status) ~ x, data = aml)
+plot(km)
+mantelhaen.test(tbl.aml[,, -18], cor = FALSE)

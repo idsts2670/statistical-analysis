@@ -1,0 +1,18 @@
+---
+title: "STAT 527 HW 8"
+author: "Satoshi Ido (ID: 34788706)"
+date: 10 April 2023
+output: pdf_document
+---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+```{r}
+# data prep
+library("lattice")
+library("dplyr")
+```

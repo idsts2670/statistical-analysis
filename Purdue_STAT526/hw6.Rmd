@@ -91,13 +91,6 @@ m3_a <- step(m3, list(lower = ~ ., upper = ~.^3))
 
 # log-normal model
 df$Days[df$Days == 0] = 0.05
-m4 <- glm(log(Days) ~ Eth + Sex + Age + Lrn, data = df)
+m4 <- lm(log(Days) ~ Eth + Sex + Age + Lrn, data = df)
 m4_a <- step(m4, list(lower = ~., upper = ~.^3))
-residuals(m4_a, type = c("deviance", "pearson"))
-```
-
-```{r}
-lrtest(m2_a, m3_a)
-summary(m4_a)
-m4_a$residuals
 ```

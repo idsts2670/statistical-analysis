@@ -18,7 +18,8 @@ head(df2)
 df1$Company <- tolower(df1$Company)
 df2$Company <- tolower(df2$Company)
 
+## merge
 df <- merge(df1, df2, by = "Company")
+
 # export the merged dataset
-write.xlsx(df2, "Purdue_STAT527/unicorn_data_2_founded_year.xlsx")
 write.xlsx(df, "Purdue_STAT527/unicorn_data.xlsx")
