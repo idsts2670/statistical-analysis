@@ -1,0 +1,46 @@
+---
+title: "STAT 526 HW 7"
+author: "Satoshi Ido (ID: 34788706)"
+date: 10 April 2023
+output: pdf_document
+---
+
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+```{r}
+library("dplyr")
+library("survival")
+```
+dataset
+```{r}
+leuk <- read.csv("Purdue_STAT526/leuk.csv")
+head(leuk)
+```
+
+Q2-a
+```{r}
+# sort the dataframe
+leuk[order(leuk$time[leuk$trt == 1], decreasing = FALSE), ]
+```
+
+Q2-b
+```{r}
+sum(leuk$time[leuk$trt == 1])
+summary(survfit(Surv(time, status) ~ trt, data = leuk))
+
+surv.exp <- survreg(Surv(time, status) ~ trt, leuk, dist = "exp")
+predict(surv.exp, data.frame(trt = 7), type = "respons", se.fit = TRUE)
+
+plot(survfit(Surv(time, status) ~ trt, leuk)[2])
+points(leuk$time, exp(-exp(log(leuk$time) - sum(surv.exp$coef))))
+points(leuk$time, exp(-exp(log(leuk$time) - (sum(surv.exp$coef) - (0.218 + 0.398)))), col = 2)
+
+s7 <- exp(-exp(log(7) - sum(surv.exp$coefficients)))
+lbs7 <- exp(-exp((log(7) - (sum(surv.exp$coefficients) - (0.218 + 0.398)))))
+s7 - lbs7
+```
