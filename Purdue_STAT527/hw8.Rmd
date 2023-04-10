@@ -64,6 +64,6 @@ y[!is.na(y)]
 # Q5
 ```{r}
 # extract all the phone numbers in the given vector
-z <- str_match(v5, "\\(?\\d{3}\\)?[.-]? *\\d{3}[.-]? *[.-]?\\d{4}")
+z <- str_match(v5, "(?<!1-)\\(?\\d{3}\\)?[.-]? *\\d{3}[.-]? *[.-]?\\d{4}")
 z[!is.na(z)]
 ```
