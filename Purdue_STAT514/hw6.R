@@ -122,5 +122,30 @@ g_4 <- ggplot(df, aes(x = operator, y = model$residuals)) +
        axis.title = element_text(size = 8)
         )
 
-# multiple graph on 1 page
+## multiple graph on 1 page
 grid.arrange(g_1, g_2, g_3, g_4, ncol = 2, nrow = 2)
+
+
+# Q2
+df2 <- data.frame(
+        order = c(rep(1, 4), rep(2, 4), rep(3, 4), rep(4, 4)),
+        operator = rep(c(1, 2, 3, 4), times = 4),
+        trt = c("c", "b", "d", "a", "b", "c", "a", "d", "a", "d", "b", "c", "d", "a", "c", "b"),
+        workplace = c("beta", "gamma", "delta", "alpha", "alpha", "delta", "gamma", "beta", "delta", "alpha", "beta", "gamma", "gamma", "beta", "alpha", "delta"),
+        time = c(11, 10, 14, 8, 8, 12, 10, 12, 9, 11, 7, 15, 9, 8, 18, 6)
+        )
+head(df2)
+
+# factorize the variables
+df2$order <- as.factor(df2$order)
+df2$operator <- as.factor(df2$operator)
+df2$trt <- as.factor(df2$trt)
+df2$workplace <- as.factor(df2$workplace)
+attach(df2)
+typeof(order); typeof(operator); typeof(trt); typeof(workplace)
+class(order); class(operator); class(trt); class(workplace)
+
+
+# ANOVA
+model2 <- aov(time ~ operator + order + workplace + trt, data = df2)
+summary(model2)
