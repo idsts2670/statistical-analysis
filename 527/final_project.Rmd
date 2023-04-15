@@ -32,7 +32,7 @@ library("htmlwidgets")
 ```{r}
 print(getwd())
 df <- read.csv("/Users/satoshiido/Documents/statistical-analysis/527/unicorn_data.csv")
-head(df)
+head(df, 3)
 ```
 
 # preprocess
@@ -65,30 +65,37 @@ df <- cleaner(df)
 ```
 
 
-## divide into subgroup
+# Visualization
+
+## Treemap by country and industry
 ```{r}
-# Growing IND
-growing_list <- c("Artificial Intelligence", "Cybersecurity",
-        "Data management & analytics", "Edtech", "Fintech",
-        "E-commerce & direct-to-consumer"
+# basic treemap
+p <- treemap(df,
+            index = c("Country", "Industry", "Company"),
+            type = "index",
+            vSize = "Valuation.Billion",
+            fontcolor.labels = c("white", "white"),
+            fontsize.title = 14,
+            fontsize.labels = c(12, 9, 8),
+            palette = "Set2",
+            bg.labels = c("transparent"),
+            align.labels = list(
+              c("left", "top"),
+              c("right", "bottom"),
+              c("center", "center")
+            ),
+            border.col = c("black", "black", "black"),
+            border.lwds = c(4, 2, 1),
+            title = "Valuation by Country&Industry",
+            overlap.labels = 0,
+            inflate.labels = F
         )
-df_GI <- df[which(df$Industry %in% growing_list), ]
+p
+# make it interactive ("rootname" becomes the title of the plot):
+# inter <- d3tree2(p,  rootname = "Valuation by Country&Industry")
 
-# Legacy IND
-legacy_list <- c("Auto & transportation","Consumer & retail","Hardware",
-            "Health","Supply chain, logistics, & delivery","Travel",
-            "Internet software & services","Mobile & telecommunications"
-            )
-df_LI <- df[which(df$Industry %in% legacy_list), ]
-```
-
-# visualization
-## industry
-```{r}
-# frequency barchart
-tab1(df$Industry, cum.percent = TRUE)
-# founded year barchart
-barplot(table(df$Founded.Year))
+# save the widget
+# saveWidget(inter, file = paste0(getwd(), "/527/treemap.html"))
 ```
 
 ## top 5 countries
@@ -154,43 +161,82 @@ ggplot(
 
 ```
 
-## treemap by country and industry
+## Industry
 ```{r}
-# basic treemap
-p <- treemap(df,
-            index = c("Country", "Industry", "Company"),
-            type = "index",
-            vSize = "Valuation.Billion",
-            fontcolor.labels = c("white", "white"),
-            fontsize.title = 14,
-            fontsize.labels = c(12, 9, 8),
-            palette = "Set2",
-            bg.labels = c("transparent"),
-            align.labels = list(
-              c("left", "top"),
-              c("right", "bottom"),
-              c("center", "center")
-            ),
-            border.col = c("black", "black", "black"),
-            border.lwds = c(4, 2, 1),
-            title = "Valuation by Country&Industry",
-            overlap.labels = 0,
-            inflate.labels = F
+# frequency barchart
+tab1(df$Industry, cum.percent = TRUE)
+```
+```{r}
+# founded year barchart
+barplot(table(df$Founded.Year))
+```
+
+## Industries' valuation
+```{r}
+# divide into subgroup
+# Growing IND
+growing_list <- c("Artificial Intelligence", "Cybersecurity",
+        "Data management & analytics", "Edtech", "Fintech",
+        "E-commerce & direct-to-consumer"
         )
-p
-# make it interactive ("rootname" becomes the title of the plot):
-inter <- d3tree2(p,  rootname = "Valuation by Country&Industry")
+df_GI <- df[which(df$Industry %in% growing_list), ]
 
-# save the widget
-saveWidget(inter, file = paste0(getwd(), "/527/treemap.html"))
+# Legacy IND
+legacy_list <- c("Auto & transportation","Consumer & retail","Hardware",
+            "Health","Supply chain, logistics, & delivery","Travel",
+            "Internet software & services","Mobile & telecommunications"
+            )
+df_LI <- df[which(df$Industry %in% legacy_list), ]
 ```
 
 ```{r}
-group <- c(rep("group-1",4),rep("group-2",2),rep("group-3",3))
-subgroup <- paste("subgroup" , c(1,2,3,4,1,2,1,2,3), sep="-")
-value <- c(13,5,22,12,11,7,3,1,23)
-data <- data.frame(group,subgroup,value)
+# plotting
+boxplot(Valuation.Billion~Industry,
+        data=df_LI,
+        main="Legacy Industries' Valuation",
+        col="orange",
+        border="brown"
+)
+
+boxplot(Valuation.Billion~Industry,
+        data=df_GI,
+        main="Growing Industries' Valuation",
+        col="orange",
+        border="brown"
+)
 ```
+```{r}
+df$Count <- rep(1,length(df$Company))
+barplot(sort(count(df$Country)$freq[which(count(df$Country)$freq>3)])~count(df$Country)$x[which(count(df$Country)$freq>3)],
+        main="Number of Unicorn Companies in each Country",
+        xlab = "Countries",
+        ylab = "Number of Unicorn Companies")
+```
+```{r}
+ggplot(data=df_GI, aes(x=Country, y=Deal.Terms, fill=Industry))+geom_bar(position = "stack", stat="identity")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ggplot(data=df_LI, aes(x=Country, y=Deal.Terms, fill=Industry))+geom_bar(position = "stack", stat="identity")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+# Investors
+```{r}
+# count the number of unicorn startups each investor has invested
+# create the matrix of investors frequency count
+words.freq <- table(unlist(df$Select.Inverstors))
+investors <- cbind(names(words.freq), as.integer(words.freq))
+investors <- as.data.frame(investors)
+investors$V2 <- as.numeric(investors$V2)
+colnames(investors) <- c("investors", "count")
+investors <- investors[order(investors$count, decreasing = TRUE), ]
+head(investors, 3)
+
+
+options(repr.plot.width=15, repr.plot.height=8)
+investors2 <- filter(investors, count > 20)
+ggplot(data = investors2, aes(x = reorder(investors, -count), y = count)) + 
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
 
 # Other visualization
 ## 1.industry vs founded year
