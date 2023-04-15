@@ -31,7 +31,7 @@ library("htmlwidgets")
 # import the dataset
 ```{r}
 print(getwd())
-df <- read.csv("/Users/satoshiido/Documents/statistical-analysis/Purdue_STAT527/unicorn_data.csv")
+df <- read.csv("/Users/satoshiido/Documents/statistical-analysis/527/unicorn_data.csv")
 head(df)
 ```
 
@@ -182,7 +182,7 @@ p
 inter <- d3tree2(p,  rootname = "Valuation by Country&Industry")
 
 # save the widget
-saveWidget(inter, file = paste0(getwd(), "/Purdue_STAT527/treemap.html"))
+saveWidget(inter, file = paste0(getwd(), "/527/treemap.html"))
 ```
 
 ```{r}
