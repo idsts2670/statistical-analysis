@@ -28,11 +28,12 @@ library("car")
 # import the dataset
 ```{r}
 print(getwd())
-df <- read.csv("Purdue_STAT527/unicorn_data.csv")
+df <- read.csv("/Users/satoshiido/Documents/statistical-analysis/Purdue_STAT527/unicorn_data.csv")
 head(df)
 ```
 
 # preprocess
+clean the data
 ```{r}
 cleaner <- function(x){
     # delete the unncessary columns
@@ -47,7 +48,7 @@ cleaner <- function(x){
             stri_replace_all_regex(y, pattern = c("[$]", "[M]"),
             replacement = c("", ""), vectorize = FALSE)
             }
-    cols = c("Valuation.Billion","Total.Raised.Million")
+    cols = c("Valuation.Billion", "Total.Raised.Million")
     x[, cols] <- lapply(x[, cols], FUN)
     x %>% mutate_at(cols, as.numeric) -> x
     # change string to date format
@@ -58,8 +59,8 @@ cleaner <- function(x){
     }
 
 df <- cleaner(df)
-head(df, 3)
 ```
+
 
 ## divide into subgroup
 ```{r}
@@ -78,6 +79,81 @@ legacy_list <- c("Auto & transportation","Consumer & retail","Hardware",
 df_LI <- df[which(df$Industry %in% legacy_list), ]
 ```
 
+# visualization
+## industry
+```{r}
+# frequency barchart
+tab1(df$Industry, cum.percent = TRUE)
+# founded year barchart
+barplot(table(df$Founded.Year))
+```
+
+
+## country
+```{r}
+# group by country and count the number of each country
+tmp <- df %>%
+    group_by(Country) %>%
+    summarise(total.country.count = n(), .groups = "drop")
+# pick the top 5 countries which produce the unicorn the most
+top5countries <- unlist(tmp[order(tmp$total.country.count, decreasing = TRUE), ][0:5, 1])
+tmp <- df[which(df$Country %in% top5countries), ] %>%
+    group_by(Country) %>%
+    summarise(total.value.Billion = sum(Valuation.Billion), .groups = "drop") %>%
+    as.data.frame()
+
+# plot
+ggplot(
+        tmp,
+        aes(x = reorder(Country, -total.value.Billion),
+        y = total.value.Billion)) +
+    geom_bar(stat = "identity", fill = "skyblue4") +
+    labs(
+        title = "Top 5 countries producing unicorn companies values",
+        x = "Country",
+        y = "Total.value(B)") +
+    theme(
+        plot.title = element_text(size = 12, hjust = 0.5, color = "gray25"),
+        axis.title.x = element_text(size = 10, hjust = 0.5, color = "gray25"),
+        axis.title.y = element_text(size = 10, hjust = 0.5, color = "gray25")
+        )
+
+```
+
+
+```{r}
+# group by city and count the number of each city
+tmp <- df %>%
+    group_by(City) %>%
+    summarise(total.city.count = n(), .groups = "drop")
+# pick the top 10 cities which produce the unicorn the most
+top10cities <- unlist(tmp[order(tmp$total.city.count, decreasing = TRUE), ][0:10, 1])
+tmp <- df[which(df$City %in% top10cities), ] %>%
+    group_by(City) %>%
+    summarise(total.value.Billion = sum(Valuation.Billion), .groups = "drop") %>%
+    as.data.frame()
+
+# plot
+ggplot(
+        tmp,
+        aes(x = reorder(City, -total.value.Billion),
+        y = total.value.Billion)) +
+    geom_bar(stat = "identity", fill = "skyblue4") +
+    labs(
+        title = "Top 10 cities producing unicorn companies values",
+        x = "City",
+        y = "Total.value(B)") +
+    theme(
+        plot.title = element_text(size = 12, hjust = 0.5, color = "gray25"),
+        axis.title.x = element_text(size = 10, hjust = 0.5, color = "gray25"),
+        axis.title.y = element_text(size = 10, hjust = 0.5, color = "gray25"),
+        axis.text.x = element_text(size = 8, angle = 60, vjust = 0.7, hjust = 0.7)
+        )
+
+```
+
+
+# Other visualization
 ## 1.industry vs founded year
 ```{r}
 df$Count <- rep(1, length(df$Company))
@@ -86,28 +162,34 @@ ggplot(
     data=df, aes(x=Founded.Year, y=Count, fill=Industry))+
     geom_bar(position = "stack", stat="identity")+
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-tab1(df$Industry, cum.percent = TRUE)
-barplot(table(df$Founded.Year))
 
 ggplot(
-    data=df,
+    data=df_GI,
+    aes(x=Founded.Year, y=Valuation.Billion, fill=Industry))+
+    geom_bar(position = "stack", stat="identity")+
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+    )
+
+ggplot(
+    data=df_LI,
     aes(x=Founded.Year, y=Valuation.Billion, fill=Industry))+
     geom_bar(position = "stack", stat="identity")+
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
     )
 ```
 
-## 2.city vs industry
+## 2. city vs industry
 ```{r}
-### norrow down the most popular cities for unicorn companies
-table(df$City)
-table(df$City)[which(table(df$City) > 5)]
+### narrow down the most popular cities for unicorn companies
+# head(table(df$City))
+# table(df$City)[which(table(df$City) > 5)]
 popular_city <- names(table(df$City)[which(table(df$City) > 5)])
-new_df <- subset(df, df$City %in% popular_city)
 # new_df <- subset(df, count(df$City)[2] > 5)
+new_df <- subset(df, df$City %in% popular_city)
+
 ggplot(
-    data=new_df, aes(x=City, y=Count, fill=Industry))+
-    geom_bar(position = "stack", stat="identity")+
+    data = new_df, aes(x = reorder(City, +Count), y = Count, fill = Industry)) +
+    geom_bar(position = "stack", stat = "identity") +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
@@ -120,18 +202,19 @@ head(investors, 5)
 
 # investors
 investors <- as.data.frame(investors)
-investors$count <- as.numeric(investors$count)
-colnames(investors) <- c(c("investors", "count"))
+investors$V2 <- as.numeric(investors$V2)
+colnames(investors) <- c("investors", "count")
 investors <- investors[order(investors$count, decreasing = TRUE), ]
 head(investors, 3)
 ```
+
 
 ## 4.investors.Count vs valuation.Billion
 ```{r}
 # scatter plot
 ## Growing IND
 plot(x = df_GI[df_GI$Valuation.Billion > 5, ]$Investors.Count,
-     y = df_GI[df_GI$Valuation.Billion > 5, ]$Valuation.Billion,
+     y = df_GI[df_GI$Valuation.Billion > 5, ]$Total.Raised.Million,
         pch = 19,
         col = factor(df_GI$Industry),
         xlab = "Investors.Count",
@@ -140,7 +223,7 @@ plot(x = df_GI[df_GI$Valuation.Billion > 5, ]$Investors.Count,
 
 ## Legacy IND
 plot(x = df_LI[df_LI$Valuation.Billion > 5, ]$Investors.Count,
-     y = df_LI[df_LI$Valuation.Billion > 5, ]$Valuation.Billion,
+     y = df_LI[df_LI$Valuation.Billion > 5, ]$Total.Raised.Million,
         pch = 19,
         col = factor(df_LI$Industry),
         xlab = "Investors.Count",
@@ -162,6 +245,7 @@ plot(
     xlab = "Investors.Count", ylab = "Valuation.Billion",
     pch = 20
     )
+
 polygon( 
   c(min(df$Investors.Count), sort(df$Investors.Count) , max(df$Investors.Count)), 
   c(min(df$Valuation.Billion), df$Valuation.Billion , min(df$Valuation.Billion)), 
@@ -171,7 +255,15 @@ qqnorm(df$Investors.Count, frame = F)
 qqline(df$Investors.Count, col = "steelblue", lwd = 2)
 ```
 
-## 5.Country vs Founded year
+## 5.Valuation vs total.raised
 ```{r}
-
+# scatter plot
+## Growing IND
+plot(y = df_GI[(df_GI$Valuation.Billion > 5) & ((df_GI$Valuation.Billion < 90)), ]$Valuation.Billion,
+     x = df_GI[(df_GI$Valuation.Billion > 5) & ((df_GI$Valuation.Billion < 90)), ]$Total.Raised.Million,
+        pch = 40,
+        col = factor(df_GI$Industry),
+        xlab = "Investors.Count",
+        ylab = "Valuation.Billion"
+        )
 ```
