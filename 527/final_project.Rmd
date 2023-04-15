@@ -25,6 +25,7 @@ library("epiDisplay")
 library("car")
 library("treemap")
 library("d3treeR")
+library("htmlwidgets")
 ```
 
 # import the dataset
@@ -160,26 +161,28 @@ p <- treemap(df,
             index = c("Country", "Industry", "Company"),
             type = "index",
             vSize = "Valuation.Billion",
-            fontcolor.labels=c("gray", "orange"),
+            fontcolor.labels = c("white", "white"),
             fontsize.title = 14,
-            fontsize.labels = c(12, 10),
-            palette = "Set1",
+            fontsize.labels = c(12, 9, 8),
+            palette = "Set2",
             bg.labels = c("transparent"),
             align.labels = list(
-              c("center", "center"),
-              c("right", "bottom")
+              c("left", "top"),
+              c("right", "bottom"),
+              c("center", "center")
             ),
+            border.col = c("black", "black", "black"),
+            border.lwds = c(4, 2, 1),
             title = "Valuation by Country&Industry",
-            overlap.labels = 0.5,
+            overlap.labels = 0,
             inflate.labels = F
-          )
+        )
 p
 # make it interactive ("rootname" becomes the title of the plot):
-# inter <- d3tree2(p,  rootname = "Valuation by Country&Industry")
+inter <- d3tree2(p,  rootname = "Valuation by Country&Industry")
 
 # save the widget
-# library("htmlwidgets")
-# saveWidget(inter, file = paste0(getwd(), "/HtmlWidget/treemap.html"))
+saveWidget(inter, file = paste0(getwd(), "/Purdue_STAT527/treemap.html"))
 ```
 
 ```{r}
