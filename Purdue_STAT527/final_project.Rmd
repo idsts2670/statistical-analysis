@@ -1,7 +1,7 @@
 ---
 title: Final Project 527"
-author: "K-POP"
-date: 12 April 2023
+author: "Satoshi Ido, Shu-Ming Meng, Robert Jung"
+date: 16 April 2023
 output: pdf_document
 ---
 ```{r setup, include = FALSE, cache = FALSE}
@@ -23,6 +23,8 @@ library("ggplot2")
 library("lattice")
 library("epiDisplay")
 library("car")
+library("treemap")
+library("d3treeR")
 ```
 
 # import the dataset
@@ -88,8 +90,7 @@ tab1(df$Industry, cum.percent = TRUE)
 barplot(table(df$Founded.Year))
 ```
 
-
-## country
+## top 5 countries
 ```{r}
 # group by country and count the number of each country
 tmp <- df %>%
@@ -120,7 +121,7 @@ ggplot(
 
 ```
 
-
+## top 10 cities
 ```{r}
 # group by city and count the number of each city
 tmp <- df %>%
@@ -152,6 +153,41 @@ ggplot(
 
 ```
 
+## treemap by country and industry
+```{r}
+# basic treemap
+p <- treemap(df,
+            index = c("Country", "Industry", "Company"),
+            type = "index",
+            vSize = "Valuation.Billion",
+            fontcolor.labels=c("gray", "orange"),
+            fontsize.title = 14,
+            fontsize.labels = c(12, 10),
+            palette = "Set1",
+            bg.labels = c("transparent"),
+            align.labels = list(
+              c("center", "center"),
+              c("right", "bottom")
+            ),
+            title = "Valuation by Country&Industry",
+            overlap.labels = 0.5,
+            inflate.labels = F
+          )
+p
+# make it interactive ("rootname" becomes the title of the plot):
+# inter <- d3tree2(p,  rootname = "Valuation by Country&Industry")
+
+# save the widget
+# library("htmlwidgets")
+# saveWidget(inter, file = paste0(getwd(), "/HtmlWidget/treemap.html"))
+```
+
+```{r}
+group <- c(rep("group-1",4),rep("group-2",2),rep("group-3",3))
+subgroup <- paste("subgroup" , c(1,2,3,4,1,2,1,2,3), sep="-")
+value <- c(13,5,22,12,11,7,3,1,23)
+data <- data.frame(group,subgroup,value)
+```
 
 # Other visualization
 ## 1.industry vs founded year
