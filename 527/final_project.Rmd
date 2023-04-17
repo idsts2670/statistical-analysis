@@ -371,8 +371,9 @@ tmp <- df %>%
     group_by(City) %>%
     summarise(total.city.count = n(), .groups = "drop")
 topcities.list <- unlist(tmp[tmp$total.city.count > 10, ][, 1])
-### if the country produces more than 5 companies, it will be 1
 
+
+# Country.label & City.label
 # Add a columns to Dataframe regarding to top countries and top cities
 df2 <- df %>%
         mutate(Country.label = ifelse(
@@ -385,43 +386,31 @@ df2$Country[df2$Country.label == 0] <- "others"
 # replace the city names if they produce less than or equal to 10 companies
 df2$City[df2$City.label == 0] <- "others"
 
-df3 <- df2 %>%
-        mutate(Investor.label = ifelse(
-                Select.Investors %in% top_investors, 1, 0))
-head(df2)
-typeof(df2$Select.Investors)
-class(df2$Select.Investors)
-
-# x = df2
+# Investor.label
+## x = df2
 investor.fun <- function(x) {
     y <- x$Select.Investors
     for (i in 1:length(y)) {
         for (k in 1:length(y[[i]])) {
-            # if "k"th investor in "i"th list in dataframe is in top_investors$investors
-            ifelse(y[[i]][k] %in% top_investors$investors,
-                # And if "i"th value in Investor.label column
-                ifelse(is.null(x$Investor.label[i]), x$Investor.label[i] <- 1,
-                    ifelse(x$Investor.label[i] == 1, x$Investor.label[i], x$Investor.label[i] <- 1)
-                ), x$Investor.label[i] <- 0)
+            # if "k"th investor in "i"th list in dataframe is in top_investors$investors,
+            ifelse(
+                y[[i]][k] %in% top_investors$investors,
+                # And if "i"th value in "Investor.label" column is blank, simply insert "1",
+                ifelse(
+                    is.null(x$Investor.label[i]),
+                    x$Investor.label[i] <- 1,
+                    # if "i"th value in "Investor.label" column = "1", keep it, if = "0", replace it with "1"
+                    ifelse(
+                        x$Investor.label[i] == 1,
+                        x$Investor.label[i],
+                        x$Investor.label[i] <- 1)
+                    # if "k"th investor in "i"th list in dataframe is not in top_investors$investors, insert "0"
+                ), x$Investor.label[i] <- 0
+            )
         }
     }
     return(x)
 }
-length(df2$Select.Investors)
-tmp <- investor.fun(df2)
-head(tmp)
-df2$Select.Investors[[966]][3] %in% top_investors$investors
-length(df2$Select.Investors[[966]])
-FUN <- function(x){
-    for (i in length(x)) {
-        mutate(Investor.label = ifelse(
-            for (k in length(x[[i]])) {
-                    Select.Investors[[i]] %in% top_investors, 1, 0))
-                }
-            }
-        }
-    
+df2 <- investor.fun(df2)
 
-
-apply(df2$Select.Investors, 1, FUN)
 ```
