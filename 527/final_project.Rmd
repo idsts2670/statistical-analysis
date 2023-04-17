@@ -92,6 +92,9 @@ cleaner <- function(x){
             )
     x <- x %>% mutate_at("Valuation.Billion", as.numeric)
 
+    # create the another column with unit of "M"
+    x[, "Valuation.Million"] <- x[, "Valuation.Billion"] * 1000
+
     # change string to date format
     x$Date.Joined <- as.Date(x$Date.Joined, format = "%m/%d/%Y")
     # return the list of Investors given delimited strings
@@ -346,31 +349,27 @@ plot(y = df_GI[(df_GI$Valuation.Billion > 5) & ((df_GI$Valuation.Billion < 90)),
 tmp <- df %>%
     group_by(Country) %>%
     summarise(total.country.count = n(), .groups = "drop")
-topcountries.list <- unlist(tmp[tmp$total.country.count > 5, ][,1])
+topcountries.list <- unlist(tmp[tmp$total.country.count > 5, ][, 1])
 
 # city
 ## group by city and count the number of each city
 tmp <- df %>%
     group_by(City) %>%
     summarise(total.city.count = n(), .groups = "drop")
-topcities.list <- unlist(tmp[tmp$total.city.count > 10, ][,1])
+topcities.list <- unlist(tmp[tmp$total.city.count > 10, ][, 1])
 ### if the country produces more than 5 companies, it will be 1
 
-# Add a Column to a Dataframe
+# Add a columns to Dataframe regarding to top countries and top cities
 df2 <- df %>%
-        mutate(Country.label = if_else(
-                Country %in% topcountries.list, 1, 0
-        )) %>%
-        mutate(City.label = if_else(
-                City %in% topcities.list, 1, 0
-        ))
+        mutate(Country.label = ifelse(
+                Country %in% topcountries.list, 1, 0)) %>%
+        mutate(City.label = ifelse(
+                City %in% topcities.list, 1, 0))
 
-head(df2, 2)
+# replace the county names if they produce less than or equal to 5 companies
+df2$Country[df2$Country.label == 0] <- "others"
+# replace the city names if they produce less than or equal to 10 companies
+df2$City[df2$City.label == 0] <- "others"
 
-# pick the top 5 countries which produce the unicorn the most
-top5countries <- unlist(tmp[order(tmp$total.country.count, decreasing = TRUE), ][0:5, 1])
-tmp <- df[which(df$Country %in% top5countries), ] %>%
-    group_by(Country) %>%
-    summarise(total.value.Billion = sum(Valuation.Billion), .groups = "drop") %>%
-    as.data.frame()
+
 ```
