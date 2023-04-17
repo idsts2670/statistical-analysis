@@ -15,6 +15,7 @@ knitr::opts_chunk$set(
 ```{r}
 library("MASS")
 library("lmtest")
+library("stringr")
 library("dplyr")
 library("data.table")
 library("stringi")
@@ -38,6 +39,38 @@ head(df, 3)
 # preprocess
 clean the data
 ```{r}
+billion_func <- function(y){
+    # if the value in the column include "B", extract them
+    tmp <- y %>% filter(str_detect(y[, "Total.Raised.Million"], "B"))
+    # remove the $ and B signs
+    tmp$Total.Raised.Million <- stri_replace_all_regex(
+            tmp$Total.Raised.Million, pattern = c("[$]", "[B]"),
+            replacement = c("", ""),
+            vectorize = FALSE
+            )
+    # change the data type to numeric
+    tmp <- tmp %>% mutate_at("Total.Raised.Million", as.numeric)
+    # unit convert from $B to $M
+    tmp[, "Total.Raised.Million"] <- tmp[, "Total.Raised.Million"] * 1000
+
+    return(tmp)
+    }
+
+million_func <- function(y){
+    # if the value in the column include "M", extract them
+    tmp <- y %>% filter(str_detect(y[, "Total.Raised.Million"], "M"))
+    # remove the $ and M signs
+    tmp$Total.Raised.Million <- stri_replace_all_regex(
+            tmp$Total.Raised.Million, pattern = c("[$]", "[M]"),
+            replacement = c("", ""),
+            vectorize = FALSE
+            )
+    # change the data type to numeric
+    tmp <- tmp %>% mutate_at("Total.Raised.Million", as.numeric)
+    return(tmp)
+    }
+
+
 cleaner <- function(x){
     # delete the unncessary columns
     x <- subset(
@@ -46,27 +79,47 @@ cleaner <- function(x){
             Investors, Portfolio.Exits, Entrepreneur,
             Final.Degree, Final.School)
         )
-    # remove the $ and M signs and convert character into numeric
-    FUN <- function(y){
-            stri_replace_all_regex(y, pattern = c("[$]", "[M]"),
-            replacement = c("", ""), vectorize = FALSE)
-            }
-    cols = c("Valuation.Billion", "Total.Raised.Million")
-    x[, cols] <- lapply(x[, cols], FUN)
-    x %>% mutate_at(cols, as.numeric) -> x
+    # divide into two dataset and convert
+    tmp0 <- billion_func(x)
+    tmp1 <- million_func(x)
+    x <- rbind(tmp0, tmp1)
+
+    # remove the $ and convert character into numeric
+    x$Valuation.Billion <- stri_replace_all_regex(
+            x$Valuation.Billion, pattern = "[$]",
+            replacement = "",
+            vectorize = FALSE
+            )
+    x <- x %>% mutate_at("Valuation.Billion", as.numeric)
+
     # change string to date format
     x$Date.Joined <- as.Date(x$Date.Joined, format = "%m/%d/%Y")
     # return the list of Investors given delimited strings
     x$Select.Inverstors <- strsplit(x$Select.Inverstors, split = ", ")
+
+    # calculate how many months pasted since each company has joined the unicorn
+    floor_dec <- function(y, level=1) {round(y - 5 * 10^(-level - 1), level)}
+    YearMonth <- 
+        (20231200 - round(as.numeric(gsub("-", "", x$Date.Joined)), -2)) / 100
+        for (i in 1 : length(df$Founded.Year)) {
+            if ((YearMonth[i] %% 100 - 8) < 0) {
+                df$Date.Joined_in_months[i] <- (
+                    floor_dec(YearMonth[i]/100,0)-1)*12+abs(YearMonth[i]%%100-4
+                )
+            }
+            else {
+                df$Date.Joined_in_months[i] <- (
+                    floor_dec(YearMonth[i]/100,0))*12+abs(YearMonth[i]%%100-4
+                )
+            }
+        }
     return(x)
     }
 
 df <- cleaner(df)
 ```
 
-
 # Visualization
-
 ## tree map by country and industry
 ```{r}
 # basic treemap
@@ -200,7 +253,8 @@ boxplot(Valuation.Billion~Industry,
         col="orange",
         border="brown"
 )
-
+```
+```{r}
 boxplot(Valuation.Billion~Industry,
         data=df_GI,
         main="Growing Industries' Valuation",
@@ -219,6 +273,8 @@ barplot(sort(count(df$Country)$freq[which(count(df$Country)$freq>3)])~count(df$C
 
 ```{r}
 ggplot(data=df_GI, aes(x=Country, y=Deal.Terms, fill=Industry))+geom_bar(position = "stack", stat="identity")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+```{r}
 ggplot(data=df_LI, aes(x=Country, y=Deal.Terms, fill=Industry))+geom_bar(position = "stack", stat="identity")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 ```
 
