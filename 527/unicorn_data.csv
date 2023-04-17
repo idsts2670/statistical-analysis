@@ -1,4 +1,4 @@
-Company,Valuation.Billion,Date.Joined,Country,City,Industry,Select.Inverstors,Founded.Year,Total.Raised.Million,Financial.Stage,Investors.Count,Deal.Terms,Investors,Portfolio.Exits,Entrepreneur,Final.Degree,Final.School
+Company,Valuation.Billion,Date.Joined,Country,City,Industry,Select.Investors,Founded.Year,Total.Raised.Million,Financial.Stage,Investors.Count,Deal.Terms,Investors,Portfolio.Exits,Entrepreneur,Final.Degree,Final.School
 stripe,$95,1/23/2014,United States,San Francisco,Fintech,"Khosla Ventures, LowercaseCapital, capitalG",2010,$2.901B,Asset,39,12,"Khosla Ventures, LowercaseCapital, capitalG",1,,,
 oyo rooms,$9.6,9/25/2018,India,Gurugram,Travel,"SoftBank Group, Sequoia Capital India,Lightspeed India Partners",2012,$3.114B,None,20,11,"SoftBank Group, Sequoia Capital India,Lightspeed India Partners",None,,,
 servicetitan,$9.5,11/14/2018,United States,Glendale,Internet software & services,"Bessemer Venture Partners, ICONIQ Capital, Battery Ventures",2012,$1.099B,None,16,6,"Bessemer Venture Partners, ICONIQ Capital, Battery Ventures",None,,,

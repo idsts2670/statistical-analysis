@@ -98,20 +98,20 @@ cleaner <- function(x){
     # change string to date format
     x$Date.Joined <- as.Date(x$Date.Joined, format = "%m/%d/%Y")
     # return the list of Investors given delimited strings
-    x$Select.Inverstors <- strsplit(x$Select.Inverstors, split = ", ")
+    x$Select.Investors <- strsplit(x$Select.Investors, split = ", ")
 
     # calculate how many months pasted since each company has joined the unicorn
     floor_dec <- function(y, level=1) {round(y - 5 * 10^(-level - 1), level)}
     YearMonth <- 
         (20231200 - round(as.numeric(gsub("-", "", x$Date.Joined)), -2)) / 100
-        for (i in 1 : length(df$Founded.Year)) {
+        for (i in 1 : length(x$Founded.Year)) {
             if ((YearMonth[i] %% 100 - 8) < 0) {
-                df$Date.Joined_in_months[i] <- (
+                x$Date.Joined_in_months[i] <- (
                     floor_dec(YearMonth[i]/100,0)-1)*12+abs(YearMonth[i]%%100-4
                 )
             }
             else {
-                df$Date.Joined_in_months[i] <- (
+                x$Date.Joined_in_months[i] <- (
                     floor_dec(YearMonth[i]/100,0))*12+abs(YearMonth[i]%%100-4
                 )
             }
@@ -281,11 +281,25 @@ ggplot(data=df_GI, aes(x=Country, y=Deal.Terms, fill=Industry))+geom_bar(positio
 ggplot(data=df_LI, aes(x=Country, y=Deal.Terms, fill=Industry))+geom_bar(position = "stack", stat="identity")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 ```
 
+```{r}
+boxplot(data=df,
+        df$Date.Joined_in_months,
+        main="Time Companies' Became Unicorn Companies",
+        ylab="Month Joined")
+boxplot(data=df,
+        Date.Joined_in_months~Industry,
+        main="Time of Each Industry Became Unicorn Companies",
+        xlab = "Industry",
+        ylab = "Month Joined",
+        col="orange",
+        border="brown")
+```
+
 # Investors
 ```{r}
 # count the number of unicorn startups each investor has invested
 # create the matrix of investors frequency count
-words.freq <- table(unlist(df$Select.Inverstors))
+words.freq <- table(unlist(df$Select.Investors))
 investors <- cbind(names(words.freq), as.integer(words.freq))
 investors <- as.data.frame(investors)
 investors$V2 <- as.numeric(investors$V2)
@@ -294,9 +308,9 @@ investors <- investors[order(investors$count, decreasing = TRUE), ]
 head(investors, 3)
 
 
-options(repr.plot.width=15, repr.plot.height=8)
-investors2 <- filter(investors, count > 20)
-ggplot(data = investors2, aes(x = reorder(investors, -count), y = count)) + 
+options(repr.plot.width = 15, repr.plot.height = 8)
+top_investors <- filter(investors, count > 20)
+ggplot(data = top_investors, aes(x = reorder(investors, -count), y = count)) +
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(angle = 75, vjust = 1, hjust = 1))
 ```
@@ -371,5 +385,43 @@ df2$Country[df2$Country.label == 0] <- "others"
 # replace the city names if they produce less than or equal to 10 companies
 df2$City[df2$City.label == 0] <- "others"
 
+df3 <- df2 %>%
+        mutate(Investor.label = ifelse(
+                Select.Investors %in% top_investors, 1, 0))
+head(df2)
+typeof(df2$Select.Investors)
+class(df2$Select.Investors)
 
+# x = df2
+investor.fun <- function(x) {
+    y <- x$Select.Investors
+    for (i in 1:length(y)) {
+        for (k in 1:length(y[[i]])) {
+            # if "k"th investor in "i"th list in dataframe is in top_investors$investors
+            ifelse(y[[i]][k] %in% top_investors$investors,
+                # And if "i"th value in Investor.label column
+                ifelse(is.null(x$Investor.label[i]), x$Investor.label[i] <- 1,
+                    ifelse(x$Investor.label[i] == 1, x$Investor.label[i], x$Investor.label[i] <- 1)
+                ), x$Investor.label[i] <- 0)
+        }
+    }
+    return(x)
+}
+length(df2$Select.Investors)
+tmp <- investor.fun(df2)
+head(tmp)
+df2$Select.Investors[[966]][3] %in% top_investors$investors
+length(df2$Select.Investors[[966]])
+FUN <- function(x){
+    for (i in length(x)) {
+        mutate(Investor.label = ifelse(
+            for (k in length(x[[i]])) {
+                    Select.Investors[[i]] %in% top_investors, 1, 0))
+                }
+            }
+        }
+    
+
+
+apply(df2$Select.Investors, 1, FUN)
 ```
