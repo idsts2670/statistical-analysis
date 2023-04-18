@@ -1,7 +1,7 @@
 ---
 title: Final Project 527"
 author: "Satoshi Ido, Shu-Ming Meng, Robert Jung"
-date: 16 April 2023
+date: 17 April 2023
 output: pdf_document
 ---
 ```{r setup, include = FALSE, cache = FALSE}
@@ -10,6 +10,7 @@ knitr::opts_chunk$set(
     warning = FALSE,
     message = FALSE)
 ```
+
 
 # library
 ```{r}
@@ -123,10 +124,10 @@ df <- cleaner(df)
 ```
 
 # Visualization
-## tree map by country and industry
+## Tree Map by Country and Industry
 ```{r}
 # basic treemap
-p <- treemap(df,
+treemap(df,
             index = c("Country", "Industry", "Company"),
             type = "index",
             vSize = "Valuation.Billion",
@@ -146,15 +147,13 @@ p <- treemap(df,
             overlap.labels = 0,
             inflate.labels = F
         )
-p
-# make it interactive ("rootname" becomes the title of the plot):
-# inter <- d3tree2(p,  rootname = "Valuation by Country&Industry")
-
-# save the widget
-# saveWidget(inter, file = paste0(getwd(), "/527/treemap.html"))
 ```
+We can see some countries (US, China mainly) are the major countries producting unicorn companies.
+It is noticeable that there are some popular industries (such as Fintech, IT, AI, E-commerce) and some countries have advantage in specific industries 
+For example, UK has many unicorn companies in Fintech industry while AI and E-commerce are popular indsutries in China.
+From this plot, we decided to mainly look into Country, City, and Industry.
 
-## top 5 countries
+## Top 5 Countries
 ```{r}
 # group by country and count the number of each country
 tmp <- df %>%
@@ -184,8 +183,9 @@ ggplot(
         )
 
 ```
+Top countries producing the unicorn companies most are US, China, India, UK, and Germany. US and China are leading unicorn booms.
 
-## top 10 cities
+## Top 10 Cities
 ```{r}
 # group by city and count the number of each city
 tmp <- df %>%
@@ -214,23 +214,27 @@ ggplot(
         axis.title.y = element_text(size = 10, hjust = 0.5, color = "gray25"),
         axis.text.x = element_text(size = 8, angle = 60, vjust = 0.7, hjust = 0.7)
         )
-
 ```
+Top cities producing many unicorn companies are SF, Beijing, NY, London, Shanghai, Bengaluru, Shenzhen, and so on. 
+Mostly, the major metropolitan areas in US, China, and India
 
-## Founded year
+## Founded Year
 ```{r}
 # barchart
 barplot(table(df$Founded.Year))
 ```
+As we expected, the majority of unicorn companies are founded in 2010's. 
+It is obvious that it is a recent trend among startups for not doing IPO.
 
-## Industry
+## Number of Unicorn Companies by Each Industry
 ```{r}
 # frequency barchart
-tab1(df$Industry, cum.percent = TRUE)
+tab1(df$Industry, main = "Unicorn Companies by Industry", cum.percent = TRUE)
 ```
+We can clearly see the Fintech and Internet software & services are the two most dominating Industries in this case with 208 and 189 companies respectively.
 
-
-## Industries' valuation
+## Legacy or Growing Industries vs Companies Valuation
+Preprocess
 ```{r}
 # divide into subgroup
 # Growing IND
@@ -248,51 +252,61 @@ legacy_list <- c("Auto & transportation","Consumer & retail","Hardware",
 df_LI <- df[which(df$Industry %in% legacy_list), ]
 ```
 
+## Legacy or Growing Industries vs Companies Valuation
 ```{r}
 # plotting
-boxplot(Valuation.Billion~Industry,
-        data=df_LI,
-        main="Legacy Industries' Valuation",
-        col="orange",
-        border="brown"
-)
+ggplot(df_LI, aes(x=Industry, y=Valuation.Billion, fill=Industry)) +
+    geom_boxplot()+
+    theme(axis.text.x = element_text(size = 8, angle = 60, vjust = 0.7, hjust = 0.7)) +
+    labs(
+        title = "Legacy Industries' Valuation",
+        x = "Industry",
+        y = "Valuation.Billion")
 ```
 ```{r}
-boxplot(Valuation.Billion~Industry,
-        data=df_GI,
-        main="Growing Industries' Valuation",
-        col="orange",
-        border="brown"
-)
+ggplot(df_GI, aes(x=Industry, y=Valuation.Billion, fill=Industry)) +
+    geom_boxplot()+
+    theme(axis.text.x = element_text(size = 8, angle = 60, vjust = 0.7, hjust = 0.7)) +
+    labs(
+        title = "Growing Industries' Valuation",
+        x = "Industry",
+        y = "Valuation.Billion")
 ```
+There are apparently a lot of outliers in  both legacy and growing industries, but the scale of growing industries is larger. 
+That could mean even with similar median company valuation, more companies from growing industries have way higher company valuation.
 
-```{r}
-df$Count <- rep(1,length(df$Company))
-barplot(sort(count(df$Country)$freq[which(count(df$Country)$freq>3)])~count(df$Country)$x[which(count(df$Country)$freq>3)],
-        main="Number of Unicorn Companies in each Country",
-        xlab = "Countries",
-        ylab = "Number of Unicorn Companies")
-```
 
+## Time of Each Industry Taking to Become Unicorn Comapnies
 ```{r}
-ggplot(data=df_GI, aes(x=Country, y=Deal.Terms, fill=Industry))+geom_bar(position = "stack", stat="identity")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-```
-```{r}
-ggplot(data=df_LI, aes(x=Country, y=Deal.Terms, fill=Industry))+geom_bar(position = "stack", stat="identity")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-```
+ggplot(df, aes(x=Industry, y=Date.Joined_in_months, fill=Industry)) +
+    geom_boxplot()+
+    theme(
+        axis.text.x = element_text(size = 8, angle = 60, vjust = 0.7, hjust = 0.7)) +
+    labs(
+    title = "Time taken to be Unicorn",
+    x = "Industry",
+    y = "Months Taken to Join")
 
+```
+We roughly calculated how many months each company took to become unicorn company and group them by Industry. 
+Clearly, there's difference between some these industries.
+
+# Deal.Term vs Country by Industry
 ```{r}
-boxplot(data=df,
-        df$Date.Joined_in_months,
-        main="Time Companies' Became Unicorn Companies",
-        ylab="Month Joined")
-boxplot(data=df,
-        Date.Joined_in_months~Industry,
-        main="Time of Each Industry Became Unicorn Companies",
-        xlab = "Industry",
-        ylab = "Month Joined",
-        col="orange",
-        border="brown")
+ggplot(
+    data = df_GI,
+    aes(x = Country, y = Deal.Terms, fill = Industry)) +
+    geom_bar(position = "stack", stat="identity") +
+    theme(axis.text.x = element_text(size = 7, angle = 60, vjust = 0.7, hjust = 0.7)
+    )
+```
+```{r}
+ggplot(
+    data = df_LI,
+    aes(x = Country, y = Deal.Terms, fill = Industry)) +
+    geom_bar(position = "stack", stat = "identity") +
+    theme(axis.text.x = element_text(size = 7, angle = 60, vjust = 0.7, hjust = 0.7)
+    )
 ```
 
 # Investors
@@ -314,49 +328,12 @@ ggplot(data = top_investors, aes(x = reorder(investors, -count), y = count)) +
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(angle = 75, vjust = 1, hjust = 1))
 ```
+As we rank the investors based on how many unicorn companies each of them has invested, we notice that there are some succesful investors who invested more than 20 startups which ended up becoming unicorn companies. 
+We picked those successful investors and did plot them
 
 
-# Other visualization
-## 1.industry vs founded year
-```{r}
-df$Count <- rep(1, length(df$Company))
-
-ggplot(
-    data=df, aes(x=Founded.Year, y=Count, fill=Industry))+
-    geom_bar(position = "stack", stat="identity")+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
-ggplot(
-    data=df_GI,
-    aes(x=Founded.Year, y=Valuation.Billion, fill=Industry))+
-    geom_bar(position = "stack", stat="identity")+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
-    )
-
-ggplot(
-    data=df_LI,
-    aes(x=Founded.Year, y=Valuation.Billion, fill=Industry))+
-    geom_bar(position = "stack", stat="identity")+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
-    )
-```
-
-
-## 5.Valuation vs total.raised
-```{r}
-# scatter plot
-## Growing IND
-plot(y = df_GI[(df_GI$Valuation.Billion > 5) & ((df_GI$Valuation.Billion < 90)), ]$Valuation.Billion,
-     x = df_GI[(df_GI$Valuation.Billion > 5) & ((df_GI$Valuation.Billion < 90)), ]$Total.Raised.Million,
-        pch = 40,
-        col = factor(df_GI$Industry),
-        xlab = "Investors.Count",
-        ylab = "Valuation.Billion"
-        )
-```
-
-# modeling
-## data preprocess
+# Modeling
+## Data Preprocess
 ```{r}
 # Country
 ## group by country and count the number of each country
@@ -399,19 +376,23 @@ investor.fun <- function(x) {
     y <- x$Select.Investors
     for (i in 1:length(y)) {
         for (k in 1:length(y[[i]])) {
-            # if "k"th investor in "i"th list in dataframe is in top_investors$investors,
+            # if "k"th investor in "i"th list in 
+            # dataframe is in top_investors$investors,
             ifelse(
                 y[[i]][k] %in% top_investors$investors,
-                # And if "i"th value in "Investor.label" column is blank, simply insert "1",
+                # And if "i"th value in "Investor.label"
+                # column is blank, simply insert "1",
                 ifelse(
                     is.null(x$Investor.label[i]),
                     x$Investor.label[i] <- 1,
-                    # if "i"th value in "Investor.label" column = "1", keep it, if = "0", replace it with "1"
+                    # if "i"th value in "Investor.label" column = "1",
+                    # keep it, if = "0", replace it with "1"
                     ifelse(
                         x$Investor.label[i] == 1,
                         x$Investor.label[i],
                         x$Investor.label[i] <- 1)
-                    # if "k"th investor in "i"th list in dataframe is not in top_investors$investors, insert "0"
+                    # if "k"th investor in "i"th list in dataframe is
+                    # not in top_investors$investors, insert "0"
                 ), x$Investor.label[i] <- 0
             )
         }
@@ -431,3 +412,5 @@ lm <- lm(data = df2,
 summary(lm)
 summary(stepAIC(lm))
 ```
+Before we conclude the output, we have to be careful about the limitation of linear model. 
+Applying a Linear model to these compled data is not the optimal method since it does not take in account its collinearity and the risk of incorporating categorical values.

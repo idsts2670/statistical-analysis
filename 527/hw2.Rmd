@@ -41,8 +41,10 @@ According to Newton's gravitational law, is there any distance at which the sun'
 ```{r message = FALSE, out.width = "70%"}
 r <- 0.4:5.2
 a <- 1 / r^2
-plot(r, a, xlab="AU", ylab="the gravitational acceleration", xaxp = c(0.4, 5.2, 8))
-# if the distance = 0, the sun's gravity becomes 0, indirectly meaning it escaped entirely.
+plot(r, a, xlab="AU", ylab="the gravitational acceleration",
+    xaxp = c(0.4, 5.2, 8))
+# if the distance = 0, the sun's gravity becomes 0, 
+# indirectly meaning it escaped entirely.
 ```
 
 3\
