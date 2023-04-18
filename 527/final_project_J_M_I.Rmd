@@ -414,3 +414,5 @@ summary(stepAIC(lm))
 ```
 Before we conclude the output, we have to be careful about the limitation of linear model. 
 Applying a Linear model to these compled data is not the optimal method since it does not take in account its collinearity and the risk of incorporating categorical values.
+According to the output, Industry is actually significant while Country, City, and Investor are insignificant.
+Adjusted R-squared:  0.4139 and AIC = 3515.04 tells us the model fit is not good.
