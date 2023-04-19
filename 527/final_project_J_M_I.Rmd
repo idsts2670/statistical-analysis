@@ -2,7 +2,7 @@
 title: Final Project 527"
 author: "Satoshi Ido, Shu-Ming Meng, Robert Jung"
 date: 17 April 2023
-output: pdf_document
+output: word_document
 ---
 ```{r setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(
