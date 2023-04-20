@@ -2,6 +2,8 @@ library("dplyr")
 library("ggplot2")
 library("grid")
 library("gridExtra")
+library("remotes")
+library("rootdetectR")
 
 # Q1
 ## ANOVA
@@ -42,7 +44,7 @@ df_glass <- df %>%
                 mutate(diff_sqr_row = (row_mean - mean(row_mean))^2) %>%
                 mutate(SSA = 3 * 3 * sum(diff_sqr_row))
 
-## mean diff by each temperature categories (-> SScolumn)
+## mean diff by each temperature categories (-> SSB)
 df_temp <- df %>%
     group_by(temp) %>%
         summarise_at(vars(light), list(col_mean = mean)) %>%
@@ -120,13 +122,65 @@ g_3 <- ggplot(tmp4, aes(x = temp, y = model$residuals)) +
     theme(plot.title = element_text(hjust = 0.5, size = 10),
        axis.title = element_text(size = 8)
         )
-g_3 <- ggplot(tmp4, aes(x = temp, y = model$residuals)) +
+
+g_4 <- ggplot(tmp4, aes(x = light, y = model$residuals)) +
     geom_point() +
-    labs(x = "Factor B", y = "Residuals",
-        title = "Factor B vs Residuals") +
+    labs(x = "Response", y = "Residuals",
+        title = "Response vs Residuals") +
     theme(plot.title = element_text(hjust = 0.5, size = 10),
        axis.title = element_text(size = 8)
         )
 
 ## multiple graph on 1 page
-grid.arrange(g_1, g_2, g_3, ncol = 2, nrow = 2)
+grid.arrange(g_1, g_2, g_3, g_4, ncol = 2, nrow = 2)
+
+## interaction plot
+interaction.plot(
+    x.factor = tmp4$glass,
+    trace.factor = tmp4$temp,
+    response = tmp4$light,
+    fun = mean,
+    ylab = "Mean of y",
+    xlab = "Glass Type",
+    col = c("pink", "grey40", "blue"),
+    lty = 1,
+    lwd = 2,
+    trace.label = "Temperature")
+
+# Pairwise comparison
+## Bonferroni
+pairwise.t.test(tmp4$light, df$glass, p.adjust.method = "bonferroni")
+## Tukey
+tukey_to_matrix(TukeyHSD(model)$`glass:temp`)
+## output to txt file
+write.table(round(tukey_to_matrix(TukeyHSD(model)$`glass:temp`), 7), file="514/test.txt")
+
+# regression model
+## dataframe again
+df <- data.frame(
+        glass = c(rep(1, 9), rep(2, 9), rep(3, 9)),
+        temp = rep(c(100, 100, 100, 125, 125, 125, 150, 150, 150), times = 3),
+        light = c(
+            58.0, 56.8, 57.0, 107, 106.7, 106.5, 129.2, 128.0, 128.6, 55, 53,
+            57.9, 107, 103.5, 105, 117.8, 116.2, 109.9, 54.6, 57.5, 59.9, 106.5,
+            107.3, 108.6, 101.7, 105.4, 103.9
+            )
+        )
+## add contrasts for glass variable
+x1 <- c(rep(1, 9), rep(0, 9), rep(-1, 9))
+x2 <- c(rep(0, 9), rep(1, 9), rep(-1, 9))
+## make temp to -1, 0, 1
+t <- (df$temp - 125)/25
+## combine new columns
+df <- cbind(df, x1, x2, t)
+
+## run the model
+lm <- lm(data = df, light ~ x1 + x2 + t + I(t^2) + x1*t + x2*t + x1*I(t^2) + x2*I(t^2))
+summary(lm)
+
+
+
+
+
+jk <- c(130,155,74,180,34,40,80,75,20,70,82,58,150,188,159,126,136,122,106,115,25,70,58,45,138,110,168,160,174,120,150,139,96,104,82,60)
+sqrt(var(jk))
