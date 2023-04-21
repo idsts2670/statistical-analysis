@@ -54,7 +54,9 @@ surv_diff2
 
 # Q2
 ```{r}
+# Q2-a
 km2 <- survfit(Surv(futime, fustat) ~ rx, data = ovarian)
+tmp <- survreg(Surv(futime, fustat) ~ rx, data = ovarian)
 
 ggsurvplot(km2,
         conf.int = TRUE,
@@ -73,4 +75,25 @@ ggsurvplot(km2,
         fun = "cloglog",
         title = "Plot of Kaplan-Meier with CI type = 'log-log'"
         )
+
+# Q2-b
+wei <- survfit(Surv(futime, fustat) ~ rx, data = ovarian)
+plot(wei,
+    fun = "cloglog",
+    main = "a log-log plot of t-lambda(t) in the two trt groupss")
+
+# Q2-c
+wei2 <- survreg(
+        formula = Surv(futime, fustat) ~ age + ecog.ps + strata(rx),
+        data = ovarian,
+        dist = "weibull"
+        )
+summary(wei2)
+
+wei3 <- survreg(
+        formula = Surv(futime, fustat) ~ age + rx,
+        data = ovarian,
+        scale = 1
+        )
+summary(wei3)
 ```
