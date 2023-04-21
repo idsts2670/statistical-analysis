@@ -1,0 +1,49 @@
+---
+title: "STAT 526 HW 7"
+author: "Satoshi Ido (ID: 34788706)"
+date: 20 April 2023
+output: pdf_document
+---
+
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+# dataset
+```{r}
+diet <- read.csv("526/diet.csv")
+head(diet)
+```
+
+```{r}
+library("survival")
+library("survminer")
+```
+
+# Q1
+```{r}
+# fit a Kaplan-Meier and plot it
+km <- survfit(Surv(futime, fustat) ~ fat, data = diet[31:90, ])
+plot(km, main = "Survival Proportions: ")
+ggsurvplot(km, conf.type = "log-log")
+plot(coxph(cox.fit))
+
+# Cox model
+cox.fit <- coxph(Surv(futime, fustat) ~ fat, data = diet[31:90, ])
+cox.fit
+
+# Q1-b
+# logrank test
+surv_diff <- survdiff(Surv(futime, fustat) ~ fat, data = diet[31:90, ])
+surv_diff
+
+# Q1-c
+# logrank test
+surv_diff2 <- survdiff(Surv(futime, fustat) ~ fat, data = diet)
+surv_diff2
+
+```
+

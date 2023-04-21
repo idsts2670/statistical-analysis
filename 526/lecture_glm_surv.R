@@ -1,5 +1,5 @@
 setwd("/Users/satoshiido/Documents/statistical-analysis/")
-chan <- read.csv("Purdue_STAT526/chan.csv")
+chan <- read.csv("526/chan.csv")
 
 # Censoring and Truncation: Example
 ind <- sample(97, 20)
@@ -25,7 +25,10 @@ data(cancer)
 ## status: (right) censoring status
 ## x: maintenance chemotherapy given? (factor)
 aml
+library("readxl")
+library("knitr")
+aml <- read_excel("AML.xlsx")
 ## Kaplan-Meier estimate
 km <- survfit(Surv(time, status) ~ x, data = aml)
 plot(km)
-mantelhaen.test(tbl.aml[,, -18], cor = FALSE)
+mantelhaen.test(tbl.aml[, , -18], cor = FALSE)
