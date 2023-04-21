@@ -14,13 +14,18 @@ knitr::opts_chunk$set(
 
 # dataset
 ```{r}
+# Q1
 diet <- read.csv("526/diet.csv")
 head(diet)
+# Q2
+ovarian <- read.csv("526/ovarian.csv")
+head(ovarian)
 ```
 
 ```{r}
 library("survival")
 library("survminer")
+library("rms")
 ```
 
 # Q1
@@ -47,3 +52,25 @@ surv_diff2
 
 ```
 
+# Q2
+```{r}
+km2 <- survfit(Surv(futime, fustat) ~ rx, data = ovarian)
+
+ggsurvplot(km2,
+        conf.int = TRUE,
+        conf.type = "plain",
+        title = "Plot of Kaplan-Meier with CI type = 'plain'"
+        )
+
+ggsurvplot(km2,
+        conf.int = TRUE,
+        conf.type = "log",
+        title = "Plot of Kaplan-Meier with CI type = 'log'"
+        )
+
+ggsurvplot(km2,
+        conf.int = TRUE,
+        fun = "cloglog",
+        title = "Plot of Kaplan-Meier with CI type = 'log-log'"
+        )
+```

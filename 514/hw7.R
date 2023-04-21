@@ -155,6 +155,7 @@ tukey_to_matrix(TukeyHSD(model)$`glass:temp`)
 ## output to txt file
 write.table(round(tukey_to_matrix(TukeyHSD(model)$`glass:temp`), 7), file="514/test.txt")
 
+
 # regression model
 ## dataframe again
 df <- data.frame(
@@ -170,7 +171,7 @@ df <- data.frame(
 x1 <- c(rep(1, 9), rep(0, 9), rep(-1, 9))
 x2 <- c(rep(0, 9), rep(1, 9), rep(-1, 9))
 ## make temp to -1, 0, 1
-t <- (df$temp - 125)/25
+t <- (df$temp - 125) / 25
 ## combine new columns
 df <- cbind(df, x1, x2, t)
 
