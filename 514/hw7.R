@@ -61,7 +61,7 @@ tmp2 <- merge(tmp1, df_temp, by = "temp")
 ## SSAB
 ### y_ij_bar
 tmp3 <- tmp2 %>% group_by(glass, temp) %>% mutate(interaction_mean = mean(light))
-## mean diff by interaction (-> SSinteraction)
+### mean diff by interaction (-> SSinteraction = SSAB)
 tmp4 <- tmp3 %>%
     mutate(diff_interaction =
         ((interaction_mean + mean(tmp3$light) - row_mean - col_mean)^2))
@@ -182,6 +182,6 @@ summary(lm)
 
 
 
-
+# ignore this
 jk <- c(130,155,74,180,34,40,80,75,20,70,82,58,150,188,159,126,136,122,106,115,25,70,58,45,138,110,168,160,174,120,150,139,96,104,82,60)
 sqrt(var(jk))
