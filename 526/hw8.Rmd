@@ -83,6 +83,7 @@ plot(wei,
     main = "a log-log plot of t-lambda(t) in the two trt groupss")
 
 # Q2-c
+## "ecog.ps" should be dropped
 wei2 <- survreg(
         formula = Surv(futime, fustat) ~ age + ecog.ps + strata(rx),
         data = ovarian,
@@ -90,10 +91,17 @@ wei2 <- survreg(
         )
 summary(wei2)
 
-wei3 <- survreg(
+## comparing the startified model and regular model
+wei3_a <- survreg(
         formula = Surv(futime, fustat) ~ age + rx,
         data = ovarian,
-        scale = 1
+        scale = 0.5
         )
-summary(wei3)
+summary(wei3_a)
+
+wei3_b <- survreg(
+        formula = Surv(futime, fustat) ~ age + strata(rx),
+        data = ovarian
+        )
+summary(wei3_b)
 ```
