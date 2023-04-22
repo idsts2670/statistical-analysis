@@ -63,14 +63,14 @@ tmp2 <- merge(tmp1, df_temp, by = "temp")
 tmp3 <- tmp2 %>% group_by(glass, temp) %>% mutate(interaction_mean = mean(light))
 ### mean diff by interaction (-> SSinteraction = SSAB)
 tmp4 <- tmp3 %>%
-    mutate(diff_interaction =
+    mutate(diff_sqr_interaction =
         ((interaction_mean + mean(tmp3$light) - row_mean - col_mean)^2))
-tmp4$SSAB <- sum(tmp4$diff_interaction)
+tmp4$SSAB <- sum(tmp4$diff_sqr_interaction)
 
 ## SSE
 tmp4$SSE <- tmp4 %>%
-    mutate(diff_error = (light - interaction_mean)^2) %>%
-    pull(diff_error) %>%
+    mutate(diff_sqr_error = (light - interaction_mean)^2) %>%
+    pull(diff_sqr_error) %>%
     sum()
 
 ## SST
