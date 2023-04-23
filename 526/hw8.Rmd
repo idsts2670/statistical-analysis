@@ -15,26 +15,27 @@ knitr::opts_chunk$set(
 # dataset
 ```{r}
 # Q1
-diet <- read.csv("526/diet.csv")
+diet <- read.csv("/Users/satoshiido/Documents/statistical-analysis/526/diet.csv")
 head(diet)
 # Q2
-ovarian <- read.csv("526/ovarian.csv")
+ovarian <- read.csv("/Users/satoshiido/Documents/statistical-analysis/526/ovarian.csv")
 head(ovarian)
+# Q3
+veteran <- read.csv("/Users/satoshiido/Documents/statistical-analysis/526/veteran.csv")
+head(veteran)
 ```
 
 ```{r}
 library("survival")
 library("survminer")
-library("rms")
 ```
 
 # Q1
 ```{r}
 # fit a Kaplan-Meier and plot it
-km <- survfit(Surv(futime, fustat) ~ fat, data = diet[31:90, ])
-plot(km, main = "Survival Proportions: ")
-ggsurvplot(km, conf.type = "log-log")
-plot(coxph(cox.fit))
+km.fit <- survfit(Surv(futime, fustat) ~ fat, data = diet[31:90, ])
+plot(km.fit, main = "Survival Proportions: ")
+ggsurvplot(km.fit, conf.type = "log-log")
 
 # Cox model
 cox.fit <- coxph(Surv(futime, fustat) ~ fat, data = diet[31:90, ])
@@ -55,22 +56,22 @@ surv_diff2
 # Q2
 ```{r}
 # Q2-a
-km2 <- survfit(Surv(futime, fustat) ~ rx, data = ovarian)
+km2.fit <- survfit(Surv(futime, fustat) ~ rx, data = ovarian)
 tmp <- survreg(Surv(futime, fustat) ~ rx, data = ovarian)
 
-ggsurvplot(km2,
+ggsurvplot(km2.fit,
         conf.int = TRUE,
         conf.type = "plain",
         title = "Plot of Kaplan-Meier with CI type = 'plain'"
         )
 
-ggsurvplot(km2,
+ggsurvplot(km2.fit,
         conf.int = TRUE,
         conf.type = "log",
         title = "Plot of Kaplan-Meier with CI type = 'log'"
         )
 
-ggsurvplot(km2,
+ggsurvplot(km2.fit,
         conf.int = TRUE,
         fun = "cloglog",
         title = "Plot of Kaplan-Meier with CI type = 'log-log'"
@@ -83,7 +84,7 @@ plot(wei,
     main = "a log-log plot of t-lambda(t) in the two trt groupss")
 
 # Q2-c
-## "ecog.ps" should be dropped
+## "ecog.ps" should be dropped according to the output
 wei2 <- survreg(
         formula = Surv(futime, fustat) ~ age + ecog.ps + strata(rx),
         data = ovarian,
@@ -104,4 +105,75 @@ wei3_b <- survreg(
         data = ovarian
         )
 summary(wei3_b)
+```
+
+# Q3
+```{r}
+# which pertains to Veterans' Administration Lung Cancer study
+head(veteran)
+
+# factorize the variables
+veteran$trt <- as.factor(veteran$trt)
+veteran$prior <- as.factor(veteran$prior)
+veteran$celltype <- as.factor(veteran$celltype)
+attach(veteran)
+typeof(trt); typeof(celltype); typeof(prior); typeof(celltype)
+class(trt); class(celltype); class(prior); class(celltype)
+
+# start from constant model
+km1 <- survfit(Surv(time = time, event = status) ~ 1, data = veteran)
+ggsurvplot(km1,
+        conf.int = TRUE,
+        conf.type = "log",
+        title = "Plot of Constant Kaplan-Meier model"
+        )
+
+# model by trt group (1 = standard 2 = test)
+km2 <- survfit(Surv(time = time, event = status) ~ trt, data = veteran)
+ggsurvplot(km2,
+        conf.int = TRUE,
+        conf.type = "log",
+        title = "Plot of Kaplan-Meier model by trt group"
+        )
+# Log-rank test
+surv_diff2 <- survdiff(Surv(time, status) ~ trt, data = veteran)
+surv_diff2
+
+
+# model by prior therapy (0 = no 10 = yes)
+# prior therapy (whether a patient received treatment before the recent one)
+km3 <- survfit(Surv(time, status) ~ prior, data = veteran)
+ggsurvplot(km3,
+        conf.int = TRUE,
+        conf.type = "log",
+        title = "Plot of Kaplan-Meier model by prior group"
+        )
+# Log-rank test
+surv_diff3 <- survdiff(Surv(time, status) ~ prior, data = veteran)
+surv_diff3
+
+
+# model by celltype
+# cell types of the tumor (1=squamous, 2=smallcell, 3=adeno, 4=large)
+km4 <- survfit(Surv(time, status) ~ celltype, data = veteran)
+ggsurvplot(km4,
+        title = "Plot of Kaplan-Meier model by celltype group"
+        )
+# Log-rank test
+surv_diff4 <- survdiff(Surv(time, status) ~ celltype, data = veteran)
+surv_diff4
+
+
+# cox-model (complex survival)
+cox1 <- coxph(
+        Surv(time, status) ~ trt + celltype + diagtime + age + prior,
+        data = veteran)
+ggsurvplot(cox1,
+        title = "Plot of cox proportional model"
+        )
+# Log-rank test
+surv_diff5 <- survdiff(
+        Surv(time, status) ~ trt + celltype + diagtime + age + prior,
+        data = veteran)
+surv_diff5
 ```

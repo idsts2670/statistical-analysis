@@ -159,8 +159,3 @@ plot(df2$Weight, resid(M2_BIC), ylab = "Residuals", xlab = "Weight", main = "Car
 abline(0, 0)
 ```
 
-ANOVA for Origin, Passengers, Type
-```{r message = FALSE, out.width = "50%"}
-
-```
-
