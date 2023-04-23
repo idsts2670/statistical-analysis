@@ -117,21 +117,25 @@ veteran$trt <- as.factor(veteran$trt)
 veteran$prior <- as.factor(veteran$prior)
 veteran$celltype <- as.factor(veteran$celltype)
 attach(veteran)
-typeof(trt); typeof(celltype); typeof(prior); typeof(celltype)
-class(trt); class(celltype); class(prior); class(celltype)
+typeof(trt); typeof(celltype); typeof(prior)
+class(trt); class(celltype); class(prior)
 
 # start from constant model
 km1 <- survfit(Surv(time = time, event = status) ~ 1, data = veteran)
+# survival curve
 ggsurvplot(km1,
         conf.int = TRUE,
         conf.type = "log",
         title = "Plot of Constant Kaplan-Meier model"
         )
+survreg(Surv(time = time, event = status) ~ 1, data = veteran)
 
 # model by trt group (1 = standard 2 = test)
 km2 <- survfit(Surv(time = time, event = status) ~ trt, data = veteran)
+# survival curve
 ggsurvplot(km2,
         conf.int = TRUE,
+        pval = TRUE,
         conf.type = "log",
         title = "Plot of Kaplan-Meier model by trt group"
         )
@@ -143,8 +147,10 @@ surv_diff2
 # model by prior therapy (0 = no 10 = yes)
 # prior therapy (whether a patient received treatment before the recent one)
 km3 <- survfit(Surv(time, status) ~ prior, data = veteran)
+# survival curve
 ggsurvplot(km3,
         conf.int = TRUE,
+        pval = TRUE,
         conf.type = "log",
         title = "Plot of Kaplan-Meier model by prior group"
         )
@@ -156,6 +162,8 @@ surv_diff3
 # model by celltype
 # cell types of the tumor (1=squamous, 2=smallcell, 3=adeno, 4=large)
 km4 <- survfit(Surv(time, status) ~ celltype, data = veteran)
+tmp <- survreg(Surv(time, status) ~ celltype, data = veteran)
+# survival curve
 ggsurvplot(km4,
         title = "Plot of Kaplan-Meier model by celltype group"
         )
@@ -168,6 +176,14 @@ surv_diff4
 cox1 <- coxph(
         Surv(time, status) ~ trt + celltype + diagtime + age + prior,
         data = veteran)
+
+# assumption check
+## For each covariate, the function cox.zph() correlates the corresponding set of scaled Schoenfeld residuals with time, 
+## to test for independence between residuals and time. Additionally, it performs a global test for the model as a whole.
+## according to the output, the celltype and the global test is statistically significant, meaning, the model violates the PH assumption.
+## therefore we cannot assume the proportional hazards.
+## 
+cox.zph(cox1)
 ggsurvplot(cox1,
         title = "Plot of cox proportional model"
         )
