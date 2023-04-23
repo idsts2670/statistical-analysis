@@ -172,24 +172,43 @@ surv_diff4 <- survdiff(Surv(time, status) ~ celltype, data = veteran)
 surv_diff4
 
 
-# cox-model (complex survival)
+# Cox-model (complex survival)
 cox1 <- coxph(
         Surv(time, status) ~ trt + celltype + diagtime + age + prior,
-        data = veteran)
+        data = veteran
+        )
+summary(cox1)
+
+# visualize the estimated distribution of survival times
+ggsurvplot(survfit(cox1, data = veteran),
+        title = "Plot of Cox Proportional-Hazards Model"
+        )
 
 # assumption check
-## For each covariate, the function cox.zph() correlates the corresponding set of scaled Schoenfeld residuals with time, 
-## to test for independence between residuals and time. Additionally, it performs a global test for the model as a whole.
-## according to the output, the celltype and the global test is statistically significant, meaning, the model violates the PH assumption.
-## therefore we cannot assume the proportional hazards.
-## 
-cox.zph(cox1)
-ggsurvplot(cox1,
-        title = "Plot of cox proportional model"
-        )
+## PH assumption check
+test.ph <- cox.zph(cox1)
+### a graphical diagnostic using the function ggcoxzph()
+ggcoxzph(test.ph)
+
+ggcoxdiagnostics(cox1, type = "dfbeta",
+                 linear.predictions = FALSE,
+                 ggtheme = theme_bw(),
+                 main = "Index plots of dfbeta for the Cox regression of time to lung cancer on every variables")
+
 # Log-rank test
 surv_diff5 <- survdiff(
         Surv(time, status) ~ trt + celltype + diagtime + age + prior,
         data = veteran)
 surv_diff5
+
+surv_diff5 <- survdiff(
+        Surv(time, status) ~ trt + celltype + diagtime + age + prior,
+        data = veteran)
+
+# Remodeling using the stratification
+cox2 <- coxph(
+        Surv(time, status) ~ trt + strata(celltype) + diagtime + age + prior,
+        data = veteran
+        )
+summary(cox2)
 ```
