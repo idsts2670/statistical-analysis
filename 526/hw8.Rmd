@@ -202,7 +202,7 @@ surv_diff5 <- survdiff(
         data = veteran)
 surv_diff5
 
-# Remodeling using the stratification on celltype
+# Remodeling using the stratification on "celltype"
 cox2 <- coxph(
         Surv(time, status) ~ trt + strata(celltype) + karno + diagtime + age + prior,
         data = veteran
@@ -221,7 +221,7 @@ ggcoxdiagnostics(cox2, type = "dfbeta",
                  main = "Index plots of dfbeta for the Cox regression of time to lung cancer on every variables")
 
 
-# Remodeling using the stratification on celltype and prior
+# Remodeling using the stratification on "celltype" and "prior"
 cox3 <- coxph(
         Surv(time, status) ~ trt + strata(celltype) + karno + diagtime + age + strata(prior),
         data = veteran
