@@ -26,6 +26,7 @@ head(veteran)
 ```
 
 ```{r}
+library("stats4")
 library("survival")
 library("survminer")
 ```
@@ -174,7 +175,7 @@ surv_diff4
 
 # Cox-model (complex survival)
 cox1 <- coxph(
-        Surv(time, status) ~ trt + celltype + diagtime + age + prior,
+        Surv(time, status) ~ trt + celltype + karno + diagtime + age + prior,
         data = veteran
         )
 summary(cox1)
@@ -184,7 +185,7 @@ ggsurvplot(survfit(cox1, data = veteran),
         title = "Plot of Cox Proportional-Hazards Model"
         )
 
-# assumption check
+# assumption check part1
 ## PH assumption check
 test.ph <- cox.zph(cox1)
 ### a graphical diagnostic using the function ggcoxzph()
@@ -197,18 +198,50 @@ ggcoxdiagnostics(cox1, type = "dfbeta",
 
 # Log-rank test
 surv_diff5 <- survdiff(
-        Surv(time, status) ~ trt + celltype + diagtime + age + prior,
+        Surv(time, status) ~ trt + celltype + karno + diagtime + age + prior,
         data = veteran)
 surv_diff5
 
-surv_diff5 <- survdiff(
-        Surv(time, status) ~ trt + celltype + diagtime + age + prior,
-        data = veteran)
-
-# Remodeling using the stratification
+# Remodeling using the stratification on celltype
 cox2 <- coxph(
-        Surv(time, status) ~ trt + strata(celltype) + diagtime + age + prior,
+        Surv(time, status) ~ trt + strata(celltype) + karno + diagtime + age + prior,
         data = veteran
         )
 summary(cox2)
+
+# assumption check part2
+## PH assumption check
+test.ph2 <- cox.zph(cox2)
+### a graphical diagnostic using the function ggcoxzph()
+ggcoxzph(test.ph2)
+
+ggcoxdiagnostics(cox2, type = "dfbeta",
+                 linear.predictions = FALSE,
+                 ggtheme = theme_bw(),
+                 main = "Index plots of dfbeta for the Cox regression of time to lung cancer on every variables")
+
+
+# Remodeling using the stratification on celltype and prior
+cox3 <- coxph(
+        Surv(time, status) ~ trt + strata(celltype) + karno + diagtime + age + strata(prior),
+        data = veteran
+        )
+summary(cox3)
+
+# assumption check part3
+## PH assumption check
+test.ph3 <- cox.zph(cox3)
+### a graphical diagnostic using the function ggcoxzph()
+ggcoxzph(test.ph3)
+
+ggcoxdiagnostics(cox3, type = "dfbeta",
+                 linear.predictions = FALSE,
+                 ggtheme = theme_bw(),
+                 main = "Index plots of dfbeta for the Cox regression of time to lung cancer on every variables")
+
+
+# comparison of two models
+anova(cox1, cox2); anova(cox2, cox3); anova(cox1, cox3)
+AIC(cox1); AIC(cox2); AIC(cox3)
+logLik(cox1); logLik(cox2);logLik(cox3)
 ```
