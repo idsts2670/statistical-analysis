@@ -257,7 +257,7 @@ df_LI <- df[which(df$Industry %in% legacy_list), ]
 # plotting
 ggplot(df_LI, aes(x=Industry, y=Valuation.Billion, fill=Industry)) +
     geom_boxplot()+
-    theme(axis.text.x = element_text(size = 8, angle = 60, vjust = 0.7, hjust = 0.7)) +
+    theme(axis.text.x = element_text(size = 12, angle = 30, vjust = 0.7, hjust = 0.7)) +
     labs(
         title = "Legacy Industries' Valuation",
         x = "Industry",
@@ -266,7 +266,7 @@ ggplot(df_LI, aes(x=Industry, y=Valuation.Billion, fill=Industry)) +
 ```{r}
 ggplot(df_GI, aes(x=Industry, y=Valuation.Billion, fill=Industry)) +
     geom_boxplot()+
-    theme(axis.text.x = element_text(size = 8, angle = 60, vjust = 0.7, hjust = 0.7)) +
+    theme(axis.text.x = element_text(size = 12, angle = 30, vjust = 0.7, hjust = 0.7)) +
     labs(
         title = "Growing Industries' Valuation",
         x = "Industry",
@@ -326,7 +326,7 @@ options(repr.plot.width = 15, repr.plot.height = 8)
 top_investors <- filter(investors, count > 20)
 ggplot(data = top_investors, aes(x = reorder(investors, -count), y = count)) +
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(angle = 75, vjust = 1, hjust = 1))
+  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1))
 ```
 As we rank the investors based on how many unicorn companies each of them has invested, we notice that there are some succesful investors who invested more than 20 startups which ended up becoming unicorn companies. 
 We picked those successful investors and did plot them
