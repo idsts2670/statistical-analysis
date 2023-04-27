@@ -221,7 +221,7 @@ Mostly, the major metropolitan areas in US, China, and India
 ## Founded Year
 ```{r}
 # barchart
-barplot(table(df$Founded.Year))
+barplot(table(df$Founded.Year), main = "Founded Year")
 ```
 As we expected, the majority of unicorn companies are founded in 2010's. 
 It is obvious that it is a recent trend among startups for not doing IPO.
@@ -281,7 +281,7 @@ That could mean even with similar median company valuation, more companies from 
 ggplot(df, aes(x=Industry, y=Date.Joined_in_months, fill=Industry)) +
     geom_boxplot()+
     theme(
-        axis.text.x = element_text(size = 8, angle = 60, vjust = 0.7, hjust = 0.7)) +
+        axis.text.x = element_text(size = 8, angle = 30, vjust = 0.7, hjust = 0.7)) +
     labs(
     title = "Time taken to be Unicorn",
     x = "Industry",
@@ -405,12 +405,24 @@ df2$Investor.label <- as.character(df2$Investor.label)
 
 # Modeling
 ```{r}
-lm <- lm(data = df2,
+# start with basic glm model
+glm <- glm(data = df2,
         Valuation.Billion ~ Country + City + Industry
         + Founded.Year + Total.Raised.Million + Investors.Count
         + Deal.Terms + Date.Joined_in_months + Investor.label)
-summary(lm)
-summary(stepAIC(lm))
+# stepwise model selection
+glm_2 <- step(glm, list(lower = ~ ., upper = ~.^2))
+
+summary(glm)
+summary(glm_2)
+# compare them
+## R^2
+with(summary(glm), 1 - glm$deviance / glm$null.deviance)
+with(summary(glm_2), 1 - glm_2$deviance / glm_2$null.deviance)
+## ANOVA
+anova(glm, glm_2)
+## Log-Likelihood
+lrtest(glm, glm_2)
 ```
 Before we conclude the output, we have to be careful about the limitation of linear model. 
 Applying a Linear model to these compled data is not the optimal method since it does not take in account its collinearity and the risk of incorporating categorical values.

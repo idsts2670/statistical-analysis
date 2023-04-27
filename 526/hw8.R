@@ -224,4 +224,5 @@ ggcoxdiagnostics(cox3, type = "dfbeta",
 # comparison of two models
 anova(cox1, cox2); anova(cox2, cox3); anova(cox1, cox3)
 AIC(cox1); AIC(cox2); AIC(cox3)
-logLik(cox1); logLik(cox2);logLik(cox3)
+logLik(cox1); logLik(cox2); logLik(cox3)
+lrtest(cox1, cox2); lrtest(cox2, cox3)
