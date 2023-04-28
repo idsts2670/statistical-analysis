@@ -18,7 +18,7 @@ library("survival")
 ```
 dataset
 ```{r}
-leuk <- read.csv("Purdue_STAT526/leuk.csv")
+leuk <- read.csv("526/leuk.csv")
 head(leuk)
 ```
 

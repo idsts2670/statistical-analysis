@@ -101,7 +101,7 @@ cleaner <- function(x){
     # return the list of Investors given delimited strings
     x$Select.Investors <- strsplit(x$Select.Investors, split = ", ")
 
-    # calculate how many months pasted since each company has joined the unicorn
+    # calculate how many months passed since each company has joined the unicorn
     floor_dec <- function(y, level=1) {round(y - 5 * 10^(-level - 1), level)}
     YearMonth <- 
         (20231200 - round(as.numeric(gsub("-", "", x$Date.Joined)), -2)) / 100
