@@ -43,4 +43,6 @@ points(leuk$time, exp(-exp(log(leuk$time) - (sum(surv.exp$coef) - (0.218 + 0.398
 s7 <- exp(-exp(log(7) - sum(surv.exp$coefficients)))
 lbs7 <- exp(-exp((log(7) - (sum(surv.exp$coefficients) - (0.218 + 0.398)))))
 s7 - lbs7
+-lgamma(10)
+-log(factorial(9))
 ```
