@@ -1,0 +1,107 @@
+---
+title: "STAT 656 HW 1"
+author: "Satoshi Ido (ID: 34788706)"
+date: 10 September 2023
+output: pdf_document
+---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+```{r}
+library("MASS")
+library("lmtest")
+library("fs")
+```
+
+## Question 1
+
+AR(1) model:
+\[y_i = p \cdot y_{i-1} + e_i\] 
+
+Assume that the error terms (\(e_i\)) are independently and identically distributed (i.i.d.) with a gaussian distribution \(N(0, \sigma^2)\).
+
+The PDF of a gaussian distribution is given by:
+\[f(e_i) = \frac{1}{\sqrt{2\pi\sigma^2}} \cdot \exp\left(-\frac{e_i^2}{2\sigma^2}\right)\]
+
+The likelihood function, \(L(p, \sigma^2 | y_0, y_1, y_2, ..., y_n)\), is the joint pdf of the observed data (\(y_0, y_1, y_2, ..., y_n\)) given the parameters (\(p, \sigma^2\)). Since the observations are assumed to be independent, the joint probability can be expressed as the product of individual probabilities:
+
+\[L(p, \sigma^2 | y_0, y_1, y_2, ..., y_n) = \prod f(y_i | p, \sigma^2)\]
+
+Substituting the AR(1) model equation into the likelihood function, we have:
+\[L(p, \sigma^2 | y_0, y_1, y_2, ..., y_n) = \prod f(y_i | y_{i-1}, p, \sigma^2)\]
+
+Using the PDF of the gaussian distribution, we can express the conditional probability \(f(y_i | y_{i-1}, p, \sigma^2)\) as:
+\[f(y_i | y_{i-1}, p, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}} \cdot \exp\left(-\frac{(y_i - p \cdot y_{i-1})^2}{2\sigma^2}\right)\]
+
+Taking the log of the likelihood function to obtain the log-likelihood function:
+
+\begin{align*}
+\log L(p, \sigma^2 | y_0, y_1, y_2, ..., y_n)
+    &= \log\left(\prod f(y_i | y_{i-1}, p, \sigma^2)\right) \\
+    &= \sum \log\left(\frac{1}{\sqrt{2\pi\sigma^2}} \cdot \exp\left(-\frac{(y_i - p \cdot y_{i-1})^2}{2\sigma^2}\right)\right)\\
+    &= -\frac{n}{2} \cdot \log(2\pi\sigma^2) - \frac{1}{2\sigma^2} \cdot \sum(y_i - p \cdot y_{i-1})^2
+\end{align*}
+
+The first term represents a constant that does not depend on the parameters and can be ignored during optimization. The second term quantifies the sum of squared residuals, which measures the discrepancy between the observed values and the predictions made by the AR(1) model.
+
+## Question 2
+
+Do stuff with data loaded from computation_data_hw_1.csv # You can make the data also an input to the function, or treat it as a global variable
+
+
+```{r}
+# Create the input_dir (input directory)
+current_note_path <- getwd()
+INPUT_DIR <- file.path(current_note_path, "656/hw/hw1/data")
+
+# If INPUT_DIR has not been created yet, create it
+if (!dir.exists(INPUT_DIR)) {
+  dir.create(INPUT_DIR)
+}
+
+# Create the output_dir (output directory)
+OUTPUT_DIR <- file.path(current_note_path, "656/hw/hw1/outputs")
+
+# If OUTPUT_DIR has not been created yet, create it
+if (!dir.exists(OUTPUT_DIR)) {
+  dir.create(OUTPUT_DIR)
+}
+
+# Read CSV files using a function to specify the directory automatically
+read_csv <- function(name, ...) {
+  path <- file.path(INPUT_DIR, paste0(name, ".csv"))
+  print(paste("Load:", path))
+  return(read.csv(path, ...))
+}
+```
+
+Move the file to INPUT_DIR if it is not already there. comment these out if you already have done this.
+```{r}
+# Define the source directory and destination directory
+current_note_path <- getwd()
+source_dir <- file.path(current_note_path, "656/hw/hw1")
+destination_dir <- INPUT_DIR
+
+# Get a list of CSV files in the source directory
+csv_files <- fs::dir_ls(source_dir, regexp = "\\.csv$", recurse = TRUE)
+
+# Move each CSV file to the destination directory
+for (file in csv_files) {
+  fs::file_move(file, destination_dir)
+  cat("Moved file:", file, "\n")
+}
+```
+
+```{r}
+ar_loglik <- function(rho,sig) {.... 
+    df <- read_csv("computation_data_hw_1")
+    
+    }
+```
+
+## Instruction
+![PDF File](/Users/satoshiido/Documents/statistical-analysis/656/hw/hw1/Homework1.pdf)
