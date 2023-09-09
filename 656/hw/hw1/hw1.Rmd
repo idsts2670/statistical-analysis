@@ -17,6 +17,7 @@ library("lmtest")
 library("fs")
 ```
 
+# Synthetic data
 ## Question 1
 
 AR(1) model:
@@ -24,17 +25,18 @@ AR(1) model:
 
 Assume that the error terms (\(e_i\)) are independently and identically distributed (i.i.d.) with a gaussian distribution \(N(0, \sigma^2)\).
 
-The PDF of a gaussian distribution is given by:
+The pdf of a gaussian distribution is given by:
 \[f(e_i) = \frac{1}{\sqrt{2\pi\sigma^2}} \cdot \exp\left(-\frac{e_i^2}{2\sigma^2}\right)\]
 
 The likelihood function, \(L(p, \sigma^2 | y_0, y_1, y_2, ..., y_n)\), is the joint pdf of the observed data (\(y_0, y_1, y_2, ..., y_n\)) given the parameters (\(p, \sigma^2\)). Since the observations are assumed to be independent, the joint probability can be expressed as the product of individual probabilities:
 
-\[L(p, \sigma^2 | y_0, y_1, y_2, ..., y_n) = \prod f(y_i | p, \sigma^2)\]
+\[L(p, \sigma^2 | y_0, y_1, y_2, ..., y_n) = \prod f(y_i | p, \sigma^2) \cdot f(y_0)\]
 
-Substituting the AR(1) model equation into the likelihood function, we have:
-\[L(p, \sigma^2 | y_0, y_1, y_2, ..., y_n) = \prod f(y_i | y_{i-1}, p, \sigma^2)\]
+Hence, the likelihood function of the AR(1) model would be:
+\[L(p, \sigma^2 | y_0, y_1, y_2, ..., y_n) = \prod f(y_i | y_{i-1}, p, \sigma^2) \cdot f(y_0) \quad \text{where } f(y_0) \text{ is constant = 1}\]
 
-Using the PDF of the gaussian distribution, we can express the conditional probability \(f(y_i | y_{i-1}, p, \sigma^2)\) as:
+Using the pdf of a gaussian distribution, we can express the conditional probability \(f(y_i | y_{i-1}, p, \sigma^2)\) as:
+
 \[f(y_i | y_{i-1}, p, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}} \cdot \exp\left(-\frac{(y_i - p \cdot y_{i-1})^2}{2\sigma^2}\right)\]
 
 Taking the log of the likelihood function to obtain the log-likelihood function:
@@ -46,62 +48,174 @@ Taking the log of the likelihood function to obtain the log-likelihood function:
     &= -\frac{n}{2} \cdot \log(2\pi\sigma^2) - \frac{1}{2\sigma^2} \cdot \sum(y_i - p \cdot y_{i-1})^2
 \end{align*}
 
-The first term represents a constant that does not depend on the parameters and can be ignored during optimization. The second term quantifies the sum of squared residuals, which measures the discrepancy between the observed values and the predictions made by the AR(1) model.
+The first term represents a constant that does not depend on the parameters and can be ignored during optimization. \
+The second term quantifies the sum of squared residuals, which measures the discrepancy between the observed values and the predictions made by the AR(1) model.
+
 
 ## Question 2
-
 Do stuff with data loaded from computation_data_hw_1.csv # You can make the data also an input to the function, or treat it as a global variable
+```{r}
+# # Create the input_dir (input directory)
+# current_note_path <- getwd()
+# INPUT_DIR <- file.path(current_note_path, "656/hw/hw1/data")
 
+# # If INPUT_DIR has not been created yet, create it
+# if (!dir.exists(INPUT_DIR)) {
+#   dir.create(INPUT_DIR)
+# }
+
+# # Create the output_dir (output directory)
+# OUTPUT_DIR <- file.path(current_note_path, "656/hw/hw1/outputs")
+
+# # If OUTPUT_DIR has not been created yet, create it
+# if (!dir.exists(OUTPUT_DIR)) {
+#   dir.create(OUTPUT_DIR)
+# }
+
+# # Read CSV files using a function to specify the directory automatically
+# read_csv <- function(name, ...) {
+#   path <- file.path(INPUT_DIR, paste0(name, ".csv"))
+#   print(paste("Load:", path))
+#   return(read.csv(path, ...))
+# }
+```
+
+Move the file to INPUT_DIR if it is not already there. comment these out if you already have done this.
+```{r}
+# # Define the source directory and destination directory
+# current_note_path <- getwd()
+# source_dir <- file.path(current_note_path, "656/hw/hw1")
+# destination_dir <- INPUT_DIR
+
+# # Get a list of CSV files in the source directory
+# csv_files <- fs::dir_ls(source_dir, regexp = "\\.csv$", recurse = TRUE)
+
+# # Move each CSV file to the destination directory
+# for (file in csv_files) {
+#   fs::file_move(file, destination_dir)
+#   cat("Moved file:", file, "\n")
+# }
+```
 
 ```{r}
 # Create the input_dir (input directory)
 current_note_path <- getwd()
 INPUT_DIR <- file.path(current_note_path, "656/hw/hw1/data")
-
-# If INPUT_DIR has not been created yet, create it
-if (!dir.exists(INPUT_DIR)) {
-  dir.create(INPUT_DIR)
-}
-
 # Create the output_dir (output directory)
 OUTPUT_DIR <- file.path(current_note_path, "656/hw/hw1/outputs")
-
-# If OUTPUT_DIR has not been created yet, create it
-if (!dir.exists(OUTPUT_DIR)) {
-  dir.create(OUTPUT_DIR)
-}
-
-# Read CSV files using a function to specify the directory automatically
+# Create the function to read CSV easily
 read_csv <- function(name, ...) {
   path <- file.path(INPUT_DIR, paste0(name, ".csv"))
   print(paste("Load:", path))
   return(read.csv(path, ...))
 }
-```
 
-Move the file to INPUT_DIR if it is not already there. comment these out if you already have done this.
-```{r}
-# Define the source directory and destination directory
-current_note_path <- getwd()
-source_dir <- file.path(current_note_path, "656/hw/hw1")
-destination_dir <- INPUT_DIR
+# import the data
+data <- read_csv("computation_data_hw_1")[2]
 
-# Get a list of CSV files in the source directory
-csv_files <- fs::dir_ls(source_dir, regexp = "\\.csv$", recurse = TRUE)
-
-# Move each CSV file to the destination directory
-for (file in csv_files) {
-  fs::file_move(file, destination_dir)
-  cat("Moved file:", file, "\n")
+# the function which calculates a log-likelihood given by rho and log(sigma)
+ar_loglik <- function(rho, log_sigma, data) {
+  n <- nrow(data)
+  loglik <- 0
+  for (i in 2:n) {
+    loglik <- loglik + dnorm(
+      data[i,], mean = rho * data[i-1,]
+      ,sd = exp(log_sigma)
+      ,log = TRUE
+      )
+  }
+  return(loglik)
 }
+
+
 ```
 
 ```{r}
-ar_loglik <- function(rho,sig) {.... 
-    df <- read_csv("computation_data_hw_1")
-    
-    }
+# Compute log-likelihood for different values of rho and log(sigma)
+rho <- seq(-1, 1, length.out = 100)
+log_sigma <- seq(-2, 2, length.out = 100)
+# Create a matrix to store log-likelihood values
+loglik_values <- matrix(NA, nrow = length(rho), ncol = length(log_sigma))
+# Compute log-likelihood values
+for (i in 1:length(rho)) {
+  for (j in 1:length(log_sigma)) {
+    loglik_values[i, j] <- ar_loglik(rho[i], log_sigma[j], data = data)
+  }
+}
+
+# Create a contour plot
+## set the color
+cols <- hcl.colors(10, "YlOrRd")
+contour(rho_values, log_sigma_values, loglik_values, xlab = "rho", ylab = "log(sigma)", main = "Log-Likelihood Contour Plot", col = cols)
 ```
+
+## Question 3
+
+
+```{r}
+# log prior
+## p ~ Uniform(-1, 1), log(σ) ~ N(0, 10^2)
+logprior <- function(param){
+  rho <- param[1]
+  log_sigma <- param[2]
+
+  # set the prior probabilities with log transformation in order for the future use of log posterior
+  # Uniform(-1, 1)
+  log_prior_rho <- ifelse(rho >= -1 && rho <= 1, 0, -Inf)
+  # N(0, 10^2)
+  log_prior_log_sigma <- dnorm(log_sigma, mean = 0, sd = 10, log = TRUE)
+
+  # return the value
+  return(log_prior_rho + log_prior_log_sigma)
+}
+
+# log likelihood
+loglikelihood <- function(param, data){
+  rho <- param[1]
+  log_sigma <- param[2]
+
+  # Likelihood for an AR(1) model
+  n <- length(data)
+  likelihood <- -n/2 * log(2 * pi) - (n-1)/2 * log_sigma - 1/(2 * exp(2 * log_sigma)) * sum((data[[1]][2:n] - rho * data[[1]][1:(n-1)])^2)
+  # Return log loglikelihood
+  return(likelihood)
+}
+
+# log posterior
+logposterior <- function(param, data){
+  # Return log posterior (up to a constant) for (ρ,log(σ))T
+  return(logprior(param) + loglikelihood(param, data))
+}
+
+```
+
+Visualization of the log posterior (up to a constant) for (p,log(σ))T
+```{r}
+# Compute log-likelihood for different values of rho and log(sigma)
+rho2 <- seq(-1, 1, length.out = 100)
+log_sigma2 <- seq(-5, 5, length.out = 100)
+
+# Create an empty matrix to store the log posterior values
+log_posterior_values <- matrix(nrow = length(rho2), ncol = length(log_sigma2))
+
+# Compute the log posterior for each pair of values and store them in a matrix
+for (i in 1 : length(rho2)) {
+  for (j in 1 : length(log_sigma2)) {
+    log_posterior_values[i, j] <- logposterior(c(rho2[i], log_sigma2[j]), data)
+  }
+}
+
+# Plot the log posterior (upto a constant) for (ρ,log(σ))T
+filled.contour(
+      rho_values
+      , log_sigma_values
+      , log_posterior_values
+      , xlab = "rho"
+      , ylab = "log(sigma)"
+      , main = "Log Posterior Density"
+      )
+```
+
 
 ## Instruction
 ![PDF File](/Users/satoshiido/Documents/statistical-analysis/656/hw/hw1/Homework1.pdf)
