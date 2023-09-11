@@ -12,9 +12,11 @@ knitr::opts_chunk$set(
 ```
 
 ```{r}
+library("ggplot2")
 library("MASS")
 library("lmtest")
 library("fs")
+library("moments")
 ```
 
 # Synthetic data
@@ -110,112 +112,268 @@ read_csv <- function(name, ...) {
   return(read.csv(path, ...))
 }
 
-# import the data
-data <- read_csv("computation_data_hw_1")[2]
+# Import the data
+# data <- read_csv("computation_data_hw_1")[,2]
+data <- read.csv("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw1/data/computation_data_hw_1.csv")[,2]
 
-# the function which calculates a log-likelihood given by rho and log(sigma)
-ar_loglik <- function(rho, log_sigma, data) {
-  n <- nrow(data)
-  loglik <- 0
+# The function which calculates a log-likelihood given rho and sigma
+ar_loglik <- function(rho, sigma) {
+  n <- length(data)
+  resid <- 0
   for (i in 2:n) {
-    loglik <- loglik + dnorm(
-      data[i,], mean = rho * data[i-1,]
-      ,sd = exp(log_sigma)
-      ,log = TRUE
-      )
-  }
+      resid <- resid + (data[i] - rho * data[i-1])^2
+    }
+  # Slightly adjust the variance from sigma^2 to log(sigma)
+  loglik <- (-(n/2) * log(2 * pi * sigma^2) - 1/(2 * exp(2 * log(sigma))) * resid)
   return(loglik)
 }
-
 
 ```
 
 ```{r}
 # Compute log-likelihood for different values of rho and log(sigma)
-rho <- seq(-1, 1, length.out = 100)
-log_sigma <- seq(-2, 2, length.out = 100)
-# Create a matrix to store log-likelihood values
-loglik_values <- matrix(NA, nrow = length(rho), ncol = length(log_sigma))
-# Compute log-likelihood values
-for (i in 1:length(rho)) {
-  for (j in 1:length(log_sigma)) {
-    loglik_values[i, j] <- ar_loglik(rho[i], log_sigma[j], data = data)
-  }
-}
-
+rho <- seq(-0.99, 0.99, length.out = 100)
+sigma <- seq(0.3, 2, length.out = 100)
+# Compute log-likelihood values and store them in the matrix
+loglik <- outer(rho, sigma, ar_loglik)
 # Create a contour plot
-## set the color
-cols <- hcl.colors(10, "YlOrRd")
-contour(rho_values, log_sigma_values, loglik_values, xlab = "rho", ylab = "log(sigma)", main = "Log-Likelihood Contour Plot", col = cols)
+## Set the color
+cols <- hcl.colors(30, "YlOrRd")
+par(mfrow = c(1, 1))
+contour(x = rho, y = sigma, z = loglik, xlab = "rho", ylab = "sigma", main = "Log-Likelihood Contour Plot", col = cols)
 ```
 
 ## Question 3
-
-
+The Log posterior function corresponds to the log-likelihood function in a manner of its summation.
+Whether the chosen priors are suitable or too informative depends on the situation. The uniform prior on rho means you regard all values between -1 and 1 are equally possible for rho. \
+That could be reasonable if we have no prior knowledge about rho beforehand, but it rules out anything less than -1 or more than 1, which could be too limiting if rho's actual value is outside that range. \
+The normal prior on log(sigma) lets log(sigma) vary a lot, but it sets a highest probability at log(sigma)=0, meaning sigma=1. Unless we expect sigma near 1, this prior may unncessary influential on outcomes. 
 ```{r}
-# log prior
-## p ~ Uniform(-1, 1), log(σ) ~ N(0, 10^2)
-logprior <- function(param){
-  rho <- param[1]
-  log_sigma <- param[2]
-
-  # set the prior probabilities with log transformation in order for the future use of log posterior
+# Log prior
+## p ~ Uniform(-1, 1), log(sigma) ~ N(0, 10^2)
+logprior <- function(rho, sigma){
+  # Set the prior probabilities with log transformation in order for the future use of log posterior
   # Uniform(-1, 1)
   log_prior_rho <- ifelse(rho >= -1 && rho <= 1, 0, -Inf)
   # N(0, 10^2)
-  log_prior_log_sigma <- dnorm(log_sigma, mean = 0, sd = 10, log = TRUE)
+  log_prior_log_sigma <- dnorm(log(sigma), mean = 0, sd = 10, log = TRUE)
 
-  # return the value
+  # Return the value
   return(log_prior_rho + log_prior_log_sigma)
 }
 
-# log likelihood
-loglikelihood <- function(param, data){
-  rho <- param[1]
-  log_sigma <- param[2]
-
+# Log likelihood
+loglikelihood <- function(rho, sigma){
   # Likelihood for an AR(1) model
   n <- length(data)
-  likelihood <- -n/2 * log(2 * pi) - (n-1)/2 * log_sigma - 1/(2 * exp(2 * log_sigma)) * sum((data[[1]][2:n] - rho * data[[1]][1:(n-1)])^2)
+
+  resid <- 0
+  for (i in 2:n) {
+      resid <- resid + (data[i] - rho * data[i-1])^2
+    }
+
+  likelihood <- (-(n/2) * log(2 * pi * sigma^2) - 1/(2 * exp(2 * log(sigma))) * resid)
   # Return log loglikelihood
   return(likelihood)
 }
 
-# log posterior
-logposterior <- function(param, data){
-  # Return log posterior (up to a constant) for (ρ,log(σ))T
-  return(logprior(param) + loglikelihood(param, data))
+# Log posterior
+logposterior <- function(rho, sigma){
+  # Return log posterior (up to a constant) for (p,log(sigma))T
+  return(logprior(rho, sigma) + loglikelihood(rho, sigma))
 }
-
 ```
 
-Visualization of the log posterior (up to a constant) for (p,log(σ))T
+Visualization of the log posterior (up to a constant) for (p,log(sigma))T
 ```{r}
-# Compute log-likelihood for different values of rho and log(sigma)
-rho2 <- seq(-1, 1, length.out = 100)
-log_sigma2 <- seq(-5, 5, length.out = 100)
-
-# Create an empty matrix to store the log posterior values
-log_posterior_values <- matrix(nrow = length(rho2), ncol = length(log_sigma2))
+# Compute log-likelihood for different values of rho and sigma
+rho2 <- seq(-0.99, 0.99, length.out = 100)
+sigma2 <- seq(0.3, 2, length.out = 100)
 
 # Compute the log posterior for each pair of values and store them in a matrix
-for (i in 1 : length(rho2)) {
-  for (j in 1 : length(log_sigma2)) {
-    log_posterior_values[i, j] <- logposterior(c(rho2[i], log_sigma2[j]), data)
-  }
-}
+log_posterior_values <- outer(rho2, sigma2, FUN = Vectorize(logposterior))
 
-# Plot the log posterior (upto a constant) for (ρ,log(σ))T
+# Plot the log posterior (upto a constant) for (p,log(sigma))T
 filled.contour(
-      rho_values
-      , log_sigma_values
+      rho2
+      , sigma2
       , log_posterior_values
       , xlab = "rho"
-      , ylab = "log(sigma)"
+      , ylab = "sigma"
       , main = "Log Posterior Density"
       )
 ```
 
 
-## Instruction
-![PDF File](/Users/satoshiido/Documents/statistical-analysis/656/hw/hw1/Homework1.pdf)
+## Question 5
+I selected sigma values from 0 to 2, and rho from -0.99 to 0.99 based on the contour plot in problem 3. \
+I used sample which are in the area of highest posterior density and include some areas of lower density for more robust approximation of the posterior distribution.
+```{r}
+# Compute log-likelihood for different values of rho and log(sigma)
+rho3 <- seq(-0.99, 0.99, length.out = 100)
+# log_sigma2 <- seq(-1, 0, length.out = 100)
+sigma3 <- seq(0, 2, length.out = 100)
+
+# Get unnormalized posterior values
+posterior_values <- exp(log_posterior_values)
+
+# Normalize posterior values so their sum becomes equal to 1
+posterior_prop_values <- posterior_values / sum(posterior_values)
+
+# Create a data frame of all possible parameter combinations
+param_grid <- expand.grid(rho = rho3, sigma = sigma3)
+
+# Convert posterior values to a vector
+posterior_prop_values_vec <- as.vector(posterior_prop_values)
+
+# Draw 1000 values from the discrete approximation to the posterior
+sample_indices <- sample(length(posterior_prop_values_vec), size = 1000, prob = posterior_prop_values_vec, replace = TRUE)
+sampled_params <- param_grid[sample_indices, ]
+
+# Check the first few rows of sampled_params to see the sampled parameter values
+head(sampled_params)
+
+# Plot the sampled parameters
+qplot(rho, data = sampled_params, geom = "histogram",
+      color = I("white"),
+      fill = I("blue"),
+      bins = 20, alpha = 0.3) + theme_light() + labs(title = "rho posterior")
+```
+
+## Question 7
+```{r}
+# rho
+quantile(sampled_params$rho, c(0.025, 0.25, 0.5, 0.75, 0.975))
+# sigma
+quantile(sampled_params$sigma, c(0.025, 0.25, 0.5, 0.75, 0.975))
+# Summary of rho including skewness and kurtosis
+summary(sampled_params$rho);skewness(sampled_params$rho);kurtosis(sampled_params$rho)
+# Summary of rho including skewness and kurtosis
+summary(sampled_params$sigma);skewness(sampled_params$sigma);kurtosis(sampled_params$sigma)
+```
+
+## Question 8
+```{r}
+simulate_ar1 <- function(rho, sigma, n) {
+  # Initialize the series
+  y_rep <- numeric(n)
+
+  # Add initial value
+  y_rep[1] <- rnorm(1, 0, sigma)
+
+  # Generate the remaining values
+  for (i in 2:n) {
+    y_rep[i] <- rho * y_rep[i - 1] + rnorm(1, 0, sigma)
+  }
+
+  return(y_rep)
+}
+```
+
+Generate 1000 draws from the posterior predictive distribution
+```{r}
+set.seed(123)  # for reproducibility
+# initialize a list to store the samples
+# posterior_predictive_samples <- list()
+posterior_predictive_samples <- matrix(nrow = 1000, ncol = 100)
+
+# Generate 1000 samples
+for (i in 1:1000) {
+  # Draw parameters from the posterior
+  rho <- sampled_params[i, 1]
+  sigma <- sampled_params[i, 2]
+
+  # Simulate a new dataset using these parameters
+  y_rep <- simulate_ar1(rho, sigma, 100)
+
+  # Store the simulated dataset
+  posterior_predictive_samples[i,] <- simulate_ar1(rho, sigma, 100)
+}
+```
+
+Summarize the posterior predictive distribution
+```{r}
+# Calculate the mean and variance of each simulated dataset
+sample_means <- apply(posterior_predictive_samples, 1, mean)
+sample_vars <- apply(posterior_predictive_samples, 1, var)
+
+# Display the summary of the means and variances
+summary_means <- summary(sample_means)
+summary_vars <- summary(sample_vars)
+
+print(summary_means)
+print(summary_vars)
+
+# Plot histograms of the means and variances
+## Create a 1x2 plot layout
+par(mfrow = c(1, 2))
+hist(sample_means, main = "Histogram of Sample Means", xlab = "Mean")
+hist(sample_vars, main = "Histogram of Sample Variances", xlab = "Variance")
+
+quant <- apply(posterior_predictive_samples, 2, quantile, c(0.025, 0.5, 0.975))
+quantile(posterior_predictive_samples[[1]], c(0.025, 0.5, 0.975))
+```
+
+## Question 9
+The observed data fall within the range of the posterior predictive samples, and the summary statistics is roughly similar. Hence, the model fits the data.\
+```{r}
+# create a matrix to store the 5 percentiles
+quant <- apply(posterior_predictive_samples, 2, quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
+
+plot1 <- data.frame(
+  time_ = rep(1:100, 6),
+  obs = c(data, quant[1, ], quant[2, ], quant[3, ], quant[4, ], quant[5, ]),
+  label = c(rep("data", 100), rep("prediction_2.5", 100), rep("prediction_25", 100), rep("prediction_50", 100), rep("prediction_75", 100), rep("prediction_97.5", 100))
+)
+
+ggplot(plot1, aes(x = time_, y = obs, color = label)) +
+    geom_line() +
+    theme_light() +
+    scale_color_viridis_d()
+
+```
+
+
+
+# Real data
+
+## Question 1
+I assume the information in the Github is sufficient enough to analyze cases numbers and deaths due to COVID-19.\
+It sufficiently describes the methodology of collection for each variable. Yet, if we could pull the additional data from other resources, we could have more accurate analysis. For example, the ratio of vaccinated patients by year.\
+
+## Question 2
+If I use AR(1) model, I would try transforming the data to make it stationary such as take a log of data because the data itself changed dramatically at some points. The number itself rose rapidly.\
+Hence, the AR(1) model can be remodeled as:
+\[\log y_i = p \cdot \log y_{i-1} + e_i\] 
+
+```{r}
+# data import
+us <- read.csv("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw1/data/covid_us.txt")
+states <- read.csv("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw1/data/covid_us-states.txt")
+head(us);head(states)
+tail(us);tail(states)
+```
+
+## Question 3
+As we can see from the data, the number of cases and deaths were increasing over time and never decreased.\
+From this information, I would assume $\rho$ is positive. Therefore, I would make $\rho$ postive\
+
+\[
+\rho \sim uniform(0, 1); \quad \log \sigma \sim N (0, 10^2)
+\]
+
+## Question 4
+
+```{r}
+# take the log of the data
+us$cases <- log(us$cases)
+
+# take the log of the data which only has the positive values
+us$deaths[us$deaths > 0] <- log(us$deaths[us$deaths > 0])
+
+# display the data where the number of cases is positive
+us_val <- us[which(us$date == "2020-07-01") : nrow(us),]
+us <- us[1:which(us$date == "2020-06-30"),]
+head(us)
+
+```
