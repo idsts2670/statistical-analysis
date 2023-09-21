@@ -57,29 +57,29 @@ The second term quantifies the sum of squared residuals, which measures the disc
 ## Question 2
 Do stuff with data loaded from computation_data_hw_1.csv # You can make the data also an input to the function, or treat it as a global variable
 ```{r}
-# # Create the input_dir (input directory)
-# current_note_path <- getwd()
-# INPUT_DIR <- file.path(current_note_path, "656/hw/hw1/data")
+# Create the input_dir (input directory)
+current_note_path <- getwd()
+INPUT_DIR <- file.path(current_note_path, "656/hw/hw1/data")
 
-# # If INPUT_DIR has not been created yet, create it
-# if (!dir.exists(INPUT_DIR)) {
-#   dir.create(INPUT_DIR)
-# }
+# If INPUT_DIR has not been created yet, create it
+if (!dir.exists(INPUT_DIR)) {
+  dir.create(INPUT_DIR)
+}
 
-# # Create the output_dir (output directory)
-# OUTPUT_DIR <- file.path(current_note_path, "656/hw/hw1/outputs")
+# Create the output_dir (output directory)
+OUTPUT_DIR <- file.path(current_note_path, "656/hw/hw1/outputs")
 
-# # If OUTPUT_DIR has not been created yet, create it
-# if (!dir.exists(OUTPUT_DIR)) {
-#   dir.create(OUTPUT_DIR)
-# }
+# If OUTPUT_DIR has not been created yet, create it
+if (!dir.exists(OUTPUT_DIR)) {
+  dir.create(OUTPUT_DIR)
+}
 
-# # Read CSV files using a function to specify the directory automatically
-# read_csv <- function(name, ...) {
-#   path <- file.path(INPUT_DIR, paste0(name, ".csv"))
-#   print(paste("Load:", path))
-#   return(read.csv(path, ...))
-# }
+# Read CSV files using a function to specify the directory automatically
+read_csv <- function(name, ...) {
+  path <- file.path(INPUT_DIR, paste0(name, ".csv"))
+  print(paste("Load:", path))
+  return(read.csv(path, ...))
+}
 ```
 
 Move the file to INPUT_DIR if it is not already there. comment these out if you already have done this.
@@ -100,18 +100,6 @@ Move the file to INPUT_DIR if it is not already there. comment these out if you 
 ```
 
 ```{r}
-# Create the input_dir (input directory)
-current_note_path <- getwd()
-INPUT_DIR <- file.path(current_note_path, "656/hw/hw1/data")
-# Create the output_dir (output directory)
-OUTPUT_DIR <- file.path(current_note_path, "656/hw/hw1/outputs")
-# Create the function to read CSV easily
-read_csv <- function(name, ...) {
-  path <- file.path(INPUT_DIR, paste0(name, ".csv"))
-  print(paste("Load:", path))
-  return(read.csv(path, ...))
-}
-
 # Import the data
 # data <- read_csv("computation_data_hw_1")[,2]
 data <- read.csv("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw1/data/computation_data_hw_1.csv")[,2]

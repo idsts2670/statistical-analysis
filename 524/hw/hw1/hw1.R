@@ -56,16 +56,15 @@ pdf(file="/Users/satoshiido/Documents/statistical-analysis/524/test.pdf", height
 lapply(plotlist, print)
 dev.off()
 
-## mean diff by each agents categories
-df2 %>%
-    group_by(agents) %>%
-        summarise_at(vars(strength), list(means = mean)) %>%
-            as.data.frame() %>%
-                mutate(diff_sqr = (means - mean(means))^2) %>%
-                mutate(diff_sum = sum(diff_sqr)) -> df_agents
-
 ## mean
 summarise_all(df2, mean)
 ## variance & covariance
 cov(df2)
 cov2cor(cov(df2))
+
+
+sigma <- matrix(c(2,sqrt(2)/2, sqrt(2)/2,1),2,2)
+sigma
+eigen(sigma)
+(-0.8880738)^2 + (-0.4597008)^2
+(-0.4597008)^2 + (0.8880738)^2

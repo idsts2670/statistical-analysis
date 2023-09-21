@@ -1,0 +1,71 @@
+---
+title: "STAT 656 HW 2"
+author: "Satoshi Ido (ID: 34788706)"
+date: 21 September 2023
+output: pdf_document
+---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+```{r}
+library("ggplot2")
+library("dplyr")
+library("tidyr")
+library("MASS")
+library("zoom")
+library("lmtest")
+library("fs")
+library("moments")
+library("rstan")
+library("bayesplot")
+library("StanHeaders")
+```
+
+set options to speed up the calculations
+```{r}
+# to avoid recompilation of unchanged Stan programs, we recommend calling
+rstan_options(auto_write = TRUE)
+# for execution on a local, multicore CPU with excess RAM we recommend calling
+options(mc.cores = parallel::detectCores())
+# set the size of the plots
+options(repr.plot.width = 12, repr.plot.height = 6)
+
+# options(bayesplot::theme_default())
+bayesplot_theme_set(theme_default(base_size = 24, base_family = "sans"))
+```
+
+```{r}
+# Create the input_dir (input directory)
+current_note_path <- getwd()
+INPUT_DIR <- file.path(current_note_path, "656/hw/hw2/data")
+
+# If INPUT_DIR has not been created yet, create it
+if (!dir.exists(INPUT_DIR)) {
+  dir.create(INPUT_DIR)
+}
+
+# Create the output_dir (output directory)
+OUTPUT_DIR <- file.path(current_note_path, "656/hw/hw2/outputs")
+
+# If OUTPUT_DIR has not been created yet, create it
+if (!dir.exists(OUTPUT_DIR)) {
+  dir.create(OUTPUT_DIR)
+}
+
+# Read CSV files using a function to specify the directory automatically
+read_csv <- function(name, ...) {
+  path <- file.path(INPUT_DIR, paste0(name, ".csv"))
+  print(paste("Load:", path))
+  return(read.csv(path, ...))
+}
+```
+
+```{r}
+advertising_data = read.csv(file="Advertising.csv", header=TRUE)
+head(advertising_data)
+advertising_data = advertising_data[,2:5]
+```
