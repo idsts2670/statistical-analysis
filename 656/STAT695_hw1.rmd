@@ -1,0 +1,600 @@
+---
+title: "Bayesian Data Analysis – Assignment #1"
+author: Youha Shin
+date: "September 10, 2023"
+output: pdf_document
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(viridis)
+library(reshape2)
+library(moments)
+```
+
+```{r, include = FALSE}
+setwd("/Users/youhashin/Library/CloudStorage/OneDrive-purdue.edu/Documents/STAT 656 [Bayesian Data Analysis]/HW/hw1")
+# clear workspace
+rm(list = ls())
+```
+
+<hr style="border: 1px solid gold;">
+
+# Act I: Synthetic Data
+
+## Question 1
+**The Goal:** To determine the log-likelihood function $\log L(\rho, \sigma^2 | y_0, y_1, ..., y_n)$ for $(\rho, \sigma^2)^T$ 
+for the $AR(1)$ model.  
+
+*** 
+  
+1. We start by writing out the joint probability density function of the observations:  
+$$p(y_0, y_1, ..., y_n | \rho, \sigma^2) = \prod_{i=1}^np(y_i | y_{i-1}, \rho, \sigma^2)$$   
+
+    **Meaning:** This represents the probability of observing the entire sequence of observations $y_0, y_1, ..., y_n$ given the parameters $\rho$ and $\sigma^2$.
+    This essentially sets the stage for Maximum Likelihood Estimation (MLE). 
+
+  
+
+2. Since the errors are assumed to be independent, we can write the conditional probability density function
+of each observation as:  
+$$p(y_i | y_{i-1}, \rho, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}}\exp\left[-\frac{1}{2\sigma^2}(y_i-\rho y_{i-1})^2\right]$$  
+
+    **Meaning:** The conditional probability density function represents the probability of observing $y_i$ given the previous observation $y_{i-1}$ and the parameters $\rho$ and $\sigma^2$.
+    This step leverages the autoregressive nature of the model, allowing us to decompose the joint pdf into simpler conditional pdfs; this simplification is essentially for
+    practical computations. 
+
+3. Substituting this into the joint probability density function, we simplify it into a form that can be easily manipulated: 
+$$p(y_0, y_1, ..., y_n | \rho, \sigma^2) = \left(\frac{1}{\sqrt{2\pi\sigma^2}}\right)^n \exp\left[-\frac{1}{2\sigma^2}\sum_{i=1}^n(y_i-\rho y_{i-1})^2\right]$$  
+  
+    **Meaning:** This step takes us closer to the function of the parameters $\rho$ and $\sigma^2$ that we can optimize. It integrates all pieces of the model
+    into a single expression that captures the probability of the data given the parameters. 
+
+4. Taking the logarithm of the joint probability density function, we attain the log-likelihood function in question:
+$$\log L(\rho, \sigma^2 | y_0, y_1, ..., y_n) = -\frac{n}{2} \log(2\pi) -\frac{n}{2}\log(\sigma^2)-\frac{1}{2\sigma^2}\sum_{i=1}^n(y_i-\rho y_{i-1})^2$$
+
+We may note that the first term in the log-likelihood function is a constant that does not depend on the parameters, so it can be ignored
+when maximizing the likelihood. The second term is proportional to the log of the variance, so maximizing the likelihood with respect to $\sigma^2$ is equivalent
+to minimizing the second term. The third term is proportional to the sum of squared errors, so maximizing the likelihood with respect to $\rho$ is equivalent is 
+equivalent to minimizing the third term.   
+  
+In sum, maximizing this function gives the estimates of $\rho$ and $\sigma^2$ that best fit the data. 
+
+<hr style="border: 1px solid black;">
+
+## Question 2
+**The Goal:** Write an `R` function that computes the log of the likelihood functions
+for $(\rho, \log(\sigma))^T$ for the dataset provided. Furthermore, the task includes creating a contour plot visualization of the log-likelihood function.
+
+*** 
+
+
+
+```{r} 
+## import data
+set.seed(1) # set seed for reproducibility
+
+q2 <- read.csv("computation_data_hw_1.csv", header = TRUE)
+
+y <- q2$x
+
+## Define the log-likelihood function
+ar_loglik <- function(rho, log_sig) {
+
+    # Get sigma from log calculation
+    sig <- exp(log_sig)
+
+    ## Initialize log-likelihood
+    loglik <- 0
+
+    ## Compute log-likelihood based on AR(1) model
+    n <- length(y)
+    loglik <- -n/2 * log(2 * pi * sig^2)
+    sum_term <- sum((y[2:n] - rho * y[1:(n-1)])^2)
+    loglik <- loglik - sum_term / (2 * sig^2)
+
+    return(loglik)
+}
+
+# Creating grid of rho and log_sigma values
+rho_values <- seq(-0.99, 0.99, by = 0.05) # rho must be between -1 and 1
+log_sig_values <- seq(-2, 2, by = 0.05) # log(sigma) can be any value
+# we will use a smaller range for illustration purposes
+
+# Compute the log-likelihood for each combination using the 'outer' function
+z <- outer(rho_values, log_sig_values, 
+            Vectorize(function(rho, log_sig) ar_loglik(rho, log_sig)))
+
+# Create the contour plot
+q1_plot <- contour(rho_values, log_sig_values, z, 
+        xlab = expression(rho),
+        ylab = expression(log(sigma)),
+        main = "Log-Likelihood Contour Plot for AR(1) Model",
+        levels = pretty(range(z), 20),
+        col = rainbow(10)
+        )
+
+```
+
+```{r} 
+## Attempt to zoom in
+rho <- seq(0, 1, .01)
+log_sig <- log(seq(.4, 1, .01))
+
+loglike <- outer(rho, log_sig, 
+            Vectorize(function(rho, log_sig) ar_loglik(rho, log_sig)))
+
+contour(rho, log_sig, loglike, 
+        xlab = expression(rho),
+        ylab = expression(log(sigma)),
+        main = "Log-Likelihood Contour Plot for AR(1) Model",
+        levels = pretty(range(loglike), 20),
+        col = rainbow(10)
+        )
+
+```
+
+``` {r}
+### Attempt to zoom in further
+rho <- seq(0.4, .6, .001)
+log_sig <- log(seq(.45, .55, .001))
+
+loglike <- outer(rho, log_sig, 
+            Vectorize(function(rho, log_sig) ar_loglik(rho, log_sig)))
+
+contour(rho, log_sig, loglike, nlevels = 50, 
+        xlab = expression(rho),
+        ylab = expression(log(sigma)),
+        main = "Log-Likelihood Contour Plot for AR(1) Model",
+        levels = pretty(range(loglike), 20),
+        col = rainbow(10)
+        )
+
+```
+
+
+### Interpretation of the Contour Plot
+The log-likelihood function measures how well a particular set of parameters fits a given dataset. In this case, the 
+parameters are $\rho$ and $\sigma^2$, which are the autoregressive coefficient and the standard deviation of the `AR(1)` model, respecitvely. 
+The log-likelihood function is maximized when the parameters are set to the values that best fit the data.  
+  
+The resulting contour plot shows the values of the log-likelihood function for different combinations of $\rho$ and $\sigma$.
+The highest point on the contour plot corresponds to the values of $\rho$ and $\sigma$ that maximize the log-likelihood function. 
+
+
+
+<hr style="border: 1px solid black;">
+
+## Question 3
+**The Goal:** To write an `R` function that computes the log of the posterior density (up to a constant) for
+$(\rho, \log(\sigma))^T$ under the prior specified by $\rho$ ~ $Uniform(-1, 1)$ and $\log(\sigma)$ ~ $N(0, 10^2)$ independently. 
+Furthermore, the task includes creating a visualization of this function and providing interpretations of the results.
+
+***
+
+To compute the log of the posterior density for $(\rho, \log(\sigma))^T$, we utilize Bayes' Theorem:
+$$ Posterior \propto Likelihood \times Prior$$
+  
+The likelihood is already known from the `AR(1)` model and given the specified prior distributions for 
+$\rho$ and $\log(\sigma)$, we can compute the log posterior density (up to a constant). 
+
+```{r}
+# Function to compute log-posterior density
+compute_log_posterior <- function(rho, log_sig, y) {
+
+    # Likelihood computation based on AR(1) model
+    n <- length(y)
+    sig <- exp(log_sig)
+    log_likelihood <- -n/2 * log(2 * pi * sig^2) - sum((y[2:n] - rho * y[1:(n-1)])^2 / (2 * sig^2))
+
+    # Prior computation
+    # For rho ~ Uniform(-1, 1)
+    if(rho >= -1 && rho <= 1) { 
+        log_prior_rho <- -log(2) # log(1/2) = -log(2)
+    } else {
+        log_prior_rho <- -Inf # log(0) = -Inf
+    }
+
+    # For log(sigma) ~ N(0, 10^2)
+    log_prior_log_sig <- -0.5 * (log_sig^2) / (100) # ignoring constant terms in Gaussian pdf
+    # dnorm(log_sig, 0, 10, log=T) # alternative way to compute log_prior_log_sig
+
+    # Compute log-posterior density (up to a constant)
+    log_posterior <- log_likelihood + log_prior_rho + log_prior_log_sig
+
+    return(log_posterior)
+}
+
+# Compute log-posterior values on the grid
+rho_values <- seq(-1, 1, length.out = 100) # rho must be between -1 and 1
+log_sig_values <- seq(-2, 2, length.out = 100) # log(sigma) can be any value
+log_posterior_values <- matrix(0, nrow = 100, ncol = 100) # initialize matrix of log-posterior values
+
+for (i in 1:100) {
+    for(j in 1:100) {
+        
+        # Compute log-posterior values for each combination of rho and log(sigma)
+        log_posterior_values[i, j] <- compute_log_posterior(rho_values[i], log_sig_values[j], y)
+    }
+}
+
+# Melt the matrix to a data frame for ggplot
+df <- melt(log_posterior_values)
+colnames(df) <- c("Rho", "LogSigma", "LogPosterior")
+
+# Create the contour plot
+q3_plot <- ggplot(df, aes(x = rho_values[Rho], y = log_sig_values[LogSigma], z = LogPosterior)) +
+        geom_tile(aes(fill = LogPosterior)) + # fill the tiles with log-posterior values
+        geom_contour(aes(z = LogPosterior), color = 'white') + # add contour lines
+        scale_fill_gradientn(colors = viridis::viridis(7)) + # color gradient
+        labs(x = expression(rho), y = expression(log(sigma)), fill = 'Log-Posterior Value') +
+        theme_minimal() + # minimal theme
+        ggtitle('Log-Posterior Density Contour Plot')
+
+q3_plot
+```
+
+#### How does this function correspond to the log-likelihood function?
+The log-posterior combines the log-likelihood (which measures how well the model explains the data) and the 
+log-priors (which encapsulate our prior beliefs about the parameters). In the resulting plot, one can observe that
+areas of higher density reflect parameter combinations that are more consistent with both the data and our prior beliefs.
+When examining the visualization, the highest values of the log-posterior density appear to be concentrated around $\rho = 0.5$ and $\log(\sigma) = 0$.  
+    
+
+#### Is the prior specification overly informative?
+1. **For $\rho:$** The $Uniform(-1, 1)$ prior is rather uninformative within its bounds, giving equal 
+weight to all values in this range. However, it does strictly confine $\rho$ to this range, excluding values 
+outside of it entirely.  
+2. **For $\log(\sigma):$** The Normal prior with a variance of $10^2$ tells us that values of $\log(\sigma)$ close to 0
+are more likely than values that are far from 0. However, the prior is quite broad, so it does not strongly favor any particular value of $\log(\sigma)$.  
+
+Given the wide range for $\log(\sigma)$ and the flatness of the Uniform prior for $\rho$ within its bounds,
+the prior specification here does not seem overly informative. This allows the data to play a significant role in 
+determining the posterior distribution, as reflected in the contour plot.  
+
+<hr style="border: 1px solid black;">
+
+## Question 5
+**The Goal:** Draw 1,000 values of $\rho, \log(\sigma))^T$ from a discrete grid approximation to the posterior. Describe your
+choice of discrete grid.  
+
+***
+To attain the Goal, we may leverage the work done in calculating the log-posterior values over the grid. 
+Specifically, we can use these values to create a probability distribution over the grid points, which can 
+then be sampled to approximate the posterior distribution.  
+  
+The protocol is as follows:  
+  
+1. **Normalize the Log-Posterior Values:** Convert log-posterior values to posterior probabilities by exponentiating them 
+and then normalizing so they sum to one; this allows us to interpret the values as probabilities.
+$$P(\rho, \log(\sigma) | data) \propto \exp(log posterior)$$  
+
+2. **Create a Joint Grid:** Pair each $\rho$ value with each $\log(\sigma)$ value along its corresponding
+normalized posterior probability.  
+
+3. **Sampling:** Use the `sample` function to draw 1,000 samples from this discrete distribution. 
+
+
+```{r}
+## Step 1: Normalize the Log-Posterior Values
+# We first exponentiate the log-posterior values and then normalize them so they sum to one
+exp_log_posterior_values <- exp(log_posterior_values - max(log_posterior_values)) 
+# Note: subtracting the max value ensures that the largest value is 0, which prevents overflow
+
+normalized_posterior_values <- exp_log_posterior_values / sum(exp_log_posterior_values) # normalize
+
+## Step 2: Create a Joint Grid
+grid_data <- expand.grid(rho = rho_values, log_sigma = log_sig_values) # create a joint grid
+grid_data$posterior_prob <- as.vector(normalized_posterior_values) # add posterior probabilities to the grid
+
+## Step 3: Sample 1000 values from this discrete distribution
+set.seed(42) # set seed for reproducibility
+sample_indices <- sample(1:nrow(grid_data), size = 1000, replace = TRUE, prob = grid_data$posterior_prob) # sample indices
+sampled_values <- grid_data[sample_indices, ] # get sampled values
+
+# The sampled_values df now contains 1000 samples of (rho, log(sigma)) from the posterior distribution
+head(sampled_values)
+```
+
+#### Choice of Discrete Grid
+The choice of the grid size matters as it represents the a key tradeoff between accuracy of approximation and computational efficiency.
+The grid should be 'fine' enough to capture the main features of the posterior distribution, 
+but not so fine that it becomes computationally expensive to sample from.  
+  
+In this case, the discrete grid is created using 100 values for $\rho$ and 100 values for $\log(\sigma)$, resulting in a total of 10,000 grid points,
+which should be sufficient to capture the main features of the posterior distribution.  
+
+Ultimately, the grid was chosen based on the contour plot of the log-posterior to ensure it spans the regions where the posterior density is significant. 
+The resulting `sampled_values` data frame contains 1,000 samples of $(\rho, \log(\sigma))^T$ from the posterior distribution. These samples can be used to 
+estimate the posterior, mean, variance, and other properties of the distribution.  
+
+<hr style="border: 1px solid black;">
+
+## Question 7
+**The Goal:** To use the sample draws to calculate the following summaries for each parameter: 0.025, 0.25, 0.5, 0.75, 
+0.975 quantiles, mean, standard deviation, skewness, and kurtosis. 
+
+***
+
+```{r}
+# Create an empty list to store summaries
+summaries <- list()
+
+# Loop through each variable
+for (var in c("rho", "log_sigma")) {
+
+    # Extract the samples for the variable
+    samples <- sampled_values[[var]]
+
+    # Calculate the summaries
+    summaries[[var]] <- list(
+        quantile_0.025 = quantile(samples, 0.025),
+        quantile_0.25 = quantile(samples, 0.25), 
+        quantile_0.5 = quantile(samples, 0.5),
+        quantile_0.75 = quantile(samples, 0.75), 
+        quantile_0.975 = quantile(samples, 0.975),
+        mean = mean(samples), 
+        std_dev = sd(samples), 
+        skewness = skewness(samples),
+        kurtosis = kurtosis(samples)
+    )
+}
+
+# View the summaries
+print(summaries)
+```
+
+<hr style="border: 1px black;">
+
+## Question 8
+**The Goal:** Write an `R` function that takes parameters $(\rho, \log(\sigma))^T$ and simulates a new
+dataset $y^{rep}$ according to the `AR` process. Use the two earlier `R` functions to generate 1,000 posterior
+predictive samples; summarize the draws. 
+
+***
+
+```{r}
+## Step 1: Define a function to simulate y_rep
+
+simulate_ar_proc <- function(rho, log_sigma, n) {
+    sigma <- exp(log_sigma) # get sigma from input
+    y_rep <- numeric(n) # initialize vector to store simulated values
+    y_rep[1] <- rnorm(1, mean = 0, sd = sigma) # simulate first value from N(0, sigma^2)
+
+    # Simulate the remaining values
+    for (i in 2:n) {
+        y_rep[i] <- rho * y_rep[i-1] + rnorm(1, mean = 0, sd = sigma) # simulate from N(rho * y[i-1], sigma^2)
+    }
+
+    return(y_rep)
+}
+
+## Step 2: Generate 1000 posterior predictive samples
+
+n <- length(y) # length of OG dataset
+posterior_predictive_samples <- matrix(0, nrow = 1000, ncol = n) # initialize matrix to store posterior predictive samples
+
+for (i in 1:1000) {
+    sampled_row <- sampled_values[i, ] # get the sampled values for each row
+    rho_sample <- sampled_row$rho # get rho sample
+    log_sigma_sample <- sampled_row$log_sigma # get log(sigma) sample
+
+    # Simulate a new dataset using the sampled values
+    posterior_predictive_samples[i, ] <- simulate_ar_proc(rho_sample, log_sigma_sample, n)    
+}
+
+## Step 3: Summarize the draws
+summaries <- data.frame(matrix(0, nrow = 1000, ncol = 9)) # initialize matrix to store summaries
+colnames(summaries) <- c("quantile_0.025", "quantile_0.25", "quantile_0.5", "quantile_0.75", "quantile_0.975", 
+                            "mean", "std_dev", "skewness", "kurtosis")
+
+
+summaries$mean <- apply(posterior_predictive_samples, 1, mean)
+summaries$std_dev <- apply(posterior_predictive_samples, 1, sd)
+summaries$skewness <- apply(posterior_predictive_samples, 1, skewness)
+summaries$kurtosis <- apply(posterior_predictive_samples, 1, kurtosis)
+summaries[ , 1:5] <- apply(posterior_predictive_samples, 1, quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))
+
+# View the summaries
+head(summaries)
+
+```
+
+
+<hr style="border: 1px solid black;">
+## Question 9
+**The Goal:** Compare the observed data to the posterior predictive summaries; create a plot where the 
+observed data is superimposed on the posterior predictive trajectories. Interpret the model fit and its aptness.
+
+***
+
+```{r}
+## Combine posterior predictive samples and observed data
+combined_data <- data.frame(
+    Time = rep(1:n, 1000), # time
+    Value = c(as.vector(posterior_predictive_samples), rep(y, 1000)), # posterior predictive samples + observed data
+    Type = rep(c(rep("Predicted", nrow(posterior_predictive_samples)), rep("Observed", nrow(posterior_predictive_samples))), each = n) # type of data
+)
+
+## Plot the data
+q9_plot <- ggplot(combined_data, aes(x = Time, y = Value, color = Type)) +
+        geom_line() +
+        labs(x = "Time", y = "Value", color = "Type") +
+        theme_minimal() +
+        scale_color_manual(values = c("Predicted" = "blue", "Observed" = "red")) +
+        ggtitle("Posterior Predictive Samples vs. Observed Data")
+
+q9_plot
+
+
+```
+
+
+<hr style="border: 1px solid gold;">
+
+# Act II: Real Data 
+
+## Question 1
+**The Goal:** To assess whether the information given on Github is sufficient for analyzing the data; provide 
+justifications for your case. If determined not to be sufficient, address what other information you would have requested/collected. 
+
+***
+
+The primary factors we will use to assess the sufficiency of information are: Data Quality, Data Scope, and Documentation.  
+  
+#### On Data Quality: 
+The accuracy, completeness, consistency, and granularity are all integral for proper analysis. 
+The Github page mentions that the data are from reputable sources, including the CDC and federal government, which 
+suggests that the data are likely to be of high quality. Moreover, the NYT acknowledges how their methodology is inherently
+imperfect due to the lack of uniform reporting across states and counties, as well as errors in reporting; however, the organization
+clearly has a strong team and commitment to data quality, thus we can assume that this represents one of the more robust data sources available for COVID-19.  
+  
+The datasets appear to have all the necessary columns present across its temporal range, and appears to be consistent in its structure. 
+
+#### On Data Scope:
+The `COVID-19 Data for the U.S.` overall contains columns for the date, number of cases (including both confirmed and probable), and number of deaths
+(including both confirmed and probable). The temporal range begins on January 21, 2020 and ends on August 25, 2020. The `COVID-19 Data for Individual States` operates on the same timeline and
+contains the same columns, but it also includes the state name and the fips code for each state.   
+  
+While all the necessary columns seem to be present for a basic time-series analysis, there is 
+assuredly more information that could be useful for a more advanced analysis. If resources were unlimited, additional data regarding the following would significantly enhance the 
+level of analysis possible:  
+  
+  1. Demographic Information: Age, gender, and other demographic data would provide deeper insights into which groups are most affected.
+  2. Hospitalization Rates: This would be useful for understanding the severity of cases.
+  3. Testing Rates: Knowing how many tests have been conducted would provide context to the number of cases and would enable us to make more targeted assumptions about the data.
+  4. Vaccination Rates: A critical factor that could influence the number of new cases and deaths. 
+  5. Seasonality: This would be informative for understanding the impact of the pandemic on different seasons and how the pandemic may evolve across time.
+  6. Policy Data: Information on lockdowns, mask mandates, etc., could help in understanding public behavior and the potential spread of the virus.  
+  
+#### On Documentation:
+The Github page provides a detailed description of their tracking process, helpful differentiation between the different types of data (historical vs. live), and a general overview of the methodology
+and definitions, including the different types of cases and deaths.  
+  
+However, the documentation, while useful as a higher-order overview, does not include access to more detailed information, such as data dictionaries or codebooks to understand the 
+variables and relationships with other variables. While this is perfectly understandable given the duress of the circumstances, it does introduce limitations in understanding the data on a more granular 
+level and impacts some of the assumptions we may make about the data. Comprehensive metadata which explains the units, data types, and data sources would
+drastically improve the reliability of any analysis; and further information on how the data was collected, including sampling techniques or adjustments made, would be integral for 
+gaining clarity about the limitations at hand.  
+
+<hr style="border: 1px solid black;">
+
+## Question 2
+An AR(1) model can be expressed as: 
+$$ Y_t = \rho Y_{t-1} + \epsilon_t$$
+where $\rho$ is the autoregressive coefficient and $\epsilon_t$ is the error term at time $t$.  
+  
+While using raw data can be straightforward and be reasonable if the AR assumptions are satisfied, it 
+may not capture the underlying trends or seasonality in the data.  
+  
+In the case of the COVID-19 data, the raw data is the number of total cases and deaths (including both confirmed and probable).
+This data is highly skewed, with a few days with zero cases and the later dates reporting very high numbers of cases and deaths. 
+As such, this skewness makes it difficult to fit an `AR(1)` directly to the raw data, and we should consider appropriate transformations
+based on the assumptions of the autoregressive model.  
+  
+- Stationarity: The series should be stationary, that is, its statistical properties (such as mean and variance) should remain constant
+    over time. In the AR(1) model, a requirement for stationarity is that the absolute value of $\rho_1$ is less than 1. The COVID-19 data is very likely
+    to be non-stationary due to trends and seasonality. Therefore, differencing the data at least once is generally a good protocol. 
+- Independence: The errors are assumed to be independent and identically distributed; if there is any correlation between errors, the estimated of the AR model parameters
+    will be inefficient. The COVID-19 data exhibits serial correlation, as the number of cases/deaths on any given day is influenced by the number of cases on the previous day.
+    This strengthens the case to implement a first-order differencing of the time series. 
+- Normality: The errors are assumed to be normally distributed; if the errors are not normally distributed, it may affect the validity of the model's predictions. This can be checked using
+    Q-Q plot visualizations and statistical tests. 
+
+In general, it is good practice to implement a log-transformation on the data to reduce the skewness and stabilize the variance. While this can make the interpretation of results more complex, given the 
+scientific importance of accurate modeling over interpretability in this context, transformations are justifiable and prudent. In sum, a reasonable protocol would encompass checking for stationarity in the data,
+and if necessary, differencing the data at least once. Thereafter, a log-transformation can be applied to the differenced data to reduce the skewness and stabilize the variance. These procedures would ultimately
+make the errors more independent and will likely result in a better model fit. This approach aligns with the statistical assumptions of the autoregressive model and the nature of the pandemic data. 
+
+```{r}
+# Load the data
+covid_us <- read.csv("covid_us.txt", header = TRUE, sep = ",")
+
+# ar_mod1 <- arima(log(covid_us$cases), order = c(1, 1, 0))
+ar_mod1 <- arima(covid_us$cases, order = c(1, 1, 0))
+# check the residuals for normality
+qqnorm(ar_mod1$residuals)
+qqline(ar_mod1$residuals)
+
+# check the residuals for autocorrelation
+acf(ar_mod1$residuals)
+
+# check the residuals for heteroskedasticity
+plot(ar_mod1$residuals, type = "l")
+abline(h=0, col = "red")
+
+### Hyun: Taking the differences of the data
+### covid_us$new_cases = c(0, covid_us[2:218,2] - covid_us[1:217,2])
+### covid_us$newdeath = c(0, covid_us[2:218,3] - covid_us[1:217,3])
+
+### ar_mod1 <- arima(covid_us$new_cases, order = c(1, 0, 0))
+### ar_mod1 <- arima(log(covid_us$new_cases + 100), order = c(1, 0, 0)) # adding 100 to avoid log(0)
+#### need to justfy +100; see dist of transformed value 
+
+
+### new_death_rate
+### covid_us$newdeathrate = (covid_us[,5]+3)/(covid_us[,4]+100)
+
+
+# Take the logarithm of the data
+# covid_us$log_cases <- log(covid_us$cases)
+
+# Create a new column for the first difference
+# covid_us$diff_log_cases <- (covid_us$log_cases - lag(covid_us$log_cases))
+
+# Fit an AR(1) model to the first difference
+# ar_mod2 <- arima(covid_us$diff_log_cases, order = c(1, 0, 0))
+
+# check the residuals for normality
+# qqnorm(ar_mod2$residuals)
+# qqline(ar_mod2$residuals)
+
+# check the residuals for autocorrelation
+# acf(ar_mod2$residuals)
+
+# check the residuals for heteroskedasticity
+# plot(ar_mod2$residuals, type = "l")
+# abline(h=0, col = "red")
+
+
+```
+
+
+<hr style="border: 1px solid black;">
+
+## Question 3
+**The Goal:** To specify a prior for all of the model parameters; justify your choice. 
+
+***
+
+#### Prior for the Autoregressive Coefficient $\rho$:
+The autoregressive coefficient in an `AR(1)` model represents the correlation between consecutive observations. 
+In the context of COVID-19 cases/deaths, it is logical that this coefficient is positive (since the number of cases/deaths
+on one day is likely to be similar to the number of cases on the previous day. However, it is unlikely to be exactly 1 (implying
+that the number of cases/deaths is exactly the same on consecutive days). Hence, a prior that assigns high probabilities to values
+near 1 seems to be reasonable.  
+  
+In this context, we may use a Beta distribution to model the prior distribution of $\rho$. The Beta distribution is a continuous distribution
+probability distribution that is defined on the interval (0, 1). The two parameters $\alpha$ and $\beta$ control the shape of the distribution, 
+and it is noted that the Beta distribution is Uniform when $\alpha = \beta = 1$. If we believe that the coefficient is likely to be close to 1, 
+we can choose larger $\alpha$ and $\beta$ values; alternatively, if we believe that the coefficient is likely to be close to 0, we can choose smaller
+parameter values.  
+  
+Furthermore, the Beta distribution is a conjugate prior for the AR(1) model, which means that the posterior distribution of the autoregressive
+coefficient can be easily computed using a Beta prior. This is a desirable property as it simplifies the mathematical convenience and computations.
+
+#### Prior for the Standard Deviation of the Error Term $\sigma$:
+The standard deviation of the noise term in an AR(1) model represents the variability in the number of cases that is not explained by the autoregressive process.
+Given the multitude of factors that can influence the spread of COVID-19, it is reasonable to assume that the standard deviation is relatively large. As such, 
+a prior that assigns a high probability to large values of $\sigma$ seems to be sensible approach.  
+  
+We may use the Inverse Gamma Distribution to model the prior distribution of $\sigma$. The Inverse Gamma Distribution is a continuous probability distribution defined on 
+the interval (0, $\infty$). Once more, the two parameters $\alpha$ and $\beta$ control the shape of the distribution, and it is noted that the Inverse Gamma distribution is the
+same as the Exponential distribution when $\alpha = 1$. If we believe that the standard deviation is likely to be large, we can choose $\alpha$ to be small and $\beta$ to be large.
+On the other hand, if we believe that the standard deviation is more likely to be small, we can choose $\alpha$ to be large and $\beta$ to be small.  
+  
+As with the case of the Beta distribution, the Inverse Gamma is a conjugate prior for the AR(1) model. This also makes the inverse gamma prior a convenient and pragmatic choice
+in this problem set. 
