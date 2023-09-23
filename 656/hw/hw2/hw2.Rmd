@@ -64,8 +64,19 @@ read_csv <- function(name, ...) {
 }
 ```
 
+# first design selection
+My first approach is to run the eperiments with 24 wells initially, followed by 48 wells in the second experiments. 
+The reason for this is that I want to see if the 24 wells are enough to get the information about the mean and variance of the population so that I can set a reasonable prior for the second experiment.
+I will assign pairs of concentrations for the two chemical modulators to each well in the manner as below. The main focus is to see how the effect of the one modulator changes depending on the concentration of the other modulator.
+Since I have little idea of the effect of the modulators, I will assign the concentrations of the modulators somewhat randomly.
 ```{r}
-advertising_data = read.csv(file="Advertising.csv", header=TRUE)
-head(advertising_data)
-advertising_data = advertising_data[,2:5]
+design1 <- matrix(nrow=24, ncol=2)
+# assign the concentration of the modulators randomly
+## set a seed to reproduce the same result
+set.seed(49)
+modA <- rep(seq(0, 75, by = 15), each = 4)
+modB <- rep(seq(0, 30, by = 10), times = 6)
+design1 <- cbind(modA, modB)
+# write a table and save it to csv
+write.table(design1, file = file.path(OUTPUT_DIR, "design1.csv"), sep = ",", col.names = F, row.names = F)
 ```
