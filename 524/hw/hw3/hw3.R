@@ -1,41 +1,56 @@
 # library
 library("tidyverse")
-library("dplyr")
 library("car")
 library("ggplot2")
-library("reshape2")
-library("caTools")
-library("Rcmdr")
+library("dplyr")
+library("tidyr")
 library("MASS")
-library("ggExtra")
-library("ggpubr")
-library("GGally")
+library("zoom")
+library("MVN")
+library("fs")
+library("moments")
 library("RVAideMemoire")
 
-# problem 4-39
+# path setup
+current_note_path <- getwd()
+main_path <- file.path(current_note_path, "524/hw")
+
+# problem 4.39
+## prep
 col_names <- c("Indep", "Supp", "Benev", "Conform", "Leader", "Gender", "Socio")
-df <-  read.table("/Users/satoshiido/Documents/statistical-analysis/524/hw/hw2/T4-6.txt", header=FALSE, col.names=col_names)
-df
+df <-  read.table(file.path(main_path, "hw3/T4-6.txt"), header=FALSE, col.names=col_names)
+var <- df[, c("Indep", "Supp", "Benev", "Conform", "Leader")]
 
+# (a)
+## marginal normality test
 v1 <- qqnorm(df$Indep, main="Normal Q-Q Plot", xlab="Theoretical Quantiles", ylab="Sample Quantiles")
-cor(v1$x, v1$y)
-
 v2 <- qqnorm(df$Supp, main="Normal Q-Q Plot", xlab="Theoretical Quantiles", ylab="Sample Quantiles")
-cor(v2$x, v2$y)
-
 v3 <- qqnorm(df$Benev, main="Normal Q-Q Plot", xlab="Theoretical Quantiles", ylab="Sample Quantiles")
-cor(v3$x, v3$y)
-
 v4 <- qqnorm(df$Conform, main="Normal Q-Q Plot", xlab="Theoretical Quantiles", ylab="Sample Quantiles")
-cor(v4$x, v4$y)
-
 v5 <- qqnorm(df$Leader, main="Normal Q-Q Plot", xlab="Theoretical Quantiles", ylab="Sample Quantiles")
+
+## correlation coefficient test for normality (checking the treathhold in the internet)
+cor(v1$x, v1$y)
+cor(v2$x, v2$y)
+cor(v3$x, v3$y)
+cor(v4$x, v4$y)
 cor(v5$x, v5$y)
 
-ggpairs(df[, 1:5], diag = list(continuous = "density"), title = "Scatterplot Matrix")
+# (b)
+## multivariate normality test
+### assess multivariate normality through multivariate normality tests
+mvn(var, mvnTest = "mardia")
 
-mqqnorm(df[, 1:5], main = "Multi-normal Q-Q Plot")
-install.packages("mqqnorm")
+## multi-normal Q-Q plot
+mqqnorm(var, main = "Multi-normal Q-Q Plot")
 
-install.packages("RVAideMemoire")
-Yeslibrary()
+## 
+boxcox <- boxcox(df$Supp ~ 1)
+l <- boxcox$x[which.max(boxcox$y)]
+v1 <- qqnorm(sqrt(df$Indep))
+v2 <- qqnorm(df$Supp^l)
+v5 <- qqnorm(sqrt(df$Leader))
+
+cor(v1$x, v1$y)
+cor(v2$x, v2$y)
+cor(v5$x, v5$y)
