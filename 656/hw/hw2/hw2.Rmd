@@ -112,18 +112,70 @@ generated quantities {
   for (i in 1:N) {
     y_tilde[i] = poisson_rng(lambda[i]);
   }
-  real f = beta[1] + beta[2] * x[,1] + beta[3] * x[,2] + beta[4] * x[,1]^2 + beta[5] * x[,2]^2 + beta[6] * x[,1] * x[,2];
+  vector[N] f = beta[1] + beta[2] * x[,1] + beta[3] * x[,2] + beta[4] * x[,1].^2 + beta[5] * x[,2].^2 + beta[6] * x[,1] .* x[,2];
   
 } "
 
-
+# build the model before sampling
 linreg_normal <- stan_model(model_code = linreg_normal_code)
 ```
 
 compile the model
 ```{r}
 reg1_data <- list(N = nrow(X), K = ncol(X), pr_sd = 100, x = X, y = y)
-nfit <- sampling(linreg_normal, data=reg1_data, iter=10000, warmup=2000, chains=1)
+# run the built model with given data (chains = 2 can  be okay for verification process, but it should be 4 or more for the actual analysis)
+nfit <- sampling(
+  linreg_normal,
+  data = reg1_data,
+  iter = 10000,
+  warmup = 2000,
+  chains = 2
+  )
+```
+
+```{r}
+# save the model
+saveRDS(nfit, file = file.path(OUTPUT_DIR, "nfit.rds"))
+# read the model (-> By this way, no need to run the model again)
+# nfit <- readRDS(file = file.path(OUTPUT_DIR, "nfit.rds"))
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+# trace plot
+stan_trace(nfit, pars = c("beta", "sigma"))
+```
+
+```{r}
+# posterior histogram plot
+stan_hist(nfit, pars = c("beta", "sigma"))
+```
+
+```{r}
+# density plot
+stan_dens(nfit, pars = c("beta", "sigma"), separate_chains = TRUE)
+```
+
+```{r}
+# auto correlation plot
+stan_ac(nfit, pars = c("beta", "sigma"), separate_chains = TRUE)
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
 ```
 
 # Applied problem
