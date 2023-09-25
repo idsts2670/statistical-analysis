@@ -44,7 +44,9 @@ mvn(var, mvnTest = "mardia")
 ## multi-normal Q-Q plot
 mqqnorm(var, main = "Multi-normal Q-Q Plot")
 
-## 
+## computes the optimal value of lambda by maximizing the log-likelihood function to transform the data to normality
+### find the optimal lambda and log-likelihood values for each value of lambda
+### "Indep" and "Leader" can be transformed to normality simply by taking the square root, while "Supp" can be transformed by box-cox transformation
 boxcox <- boxcox(df$Supp ~ 1)
 l <- boxcox$x[which.max(boxcox$y)]
 v1 <- qqnorm(sqrt(df$Indep))
