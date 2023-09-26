@@ -74,6 +74,18 @@ df <- read.csv("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/data
 head(df)
 ```
 
+Summary of data
+```{r}
+summary(df)
+paste0("sd of x1:", sd(df$x1), " sd of x2: ", sd(df$x2))
+```
+
+Histogram of data
+```{r}
+hist(df$x1)
+hist(df$x2)
+```
+
 ## Regular Poisson model
 ```{r}
 glm1 <- glm(formula = y ~ x1 + x2 + I(x1^2) + I(x2^2) + x1:x2,
@@ -84,102 +96,79 @@ summary(glm1)
 ```
 
 ## Data Creation
-```{r}
-modMat <- as.data.frame(model.matrix(glm1))
-modMat$offset <- 1
-names(modMat) <- c("intercept", "x1", "x2", "x1^2", "x2^2", 
-                   "x1*x2", "offset")
-
-dat <- as.list(modMat)
-dat$y <- df$y
-dat$N <- nrow(modMat)
-dat$p <- ncol(modMat) - 1
-```
-
-```{r}
-preprocessing
-```{r}
-X <- df[, 0:2]
-X[, "Offset"] <- 1
-y <- df[, "y"]
-```
-
-model specification
+Model Specification in Stan
 ```{r}
 
-linreg_normal_code <- "
+poissonreg_normal_code = "
+// Poisson model with normal prior
+
 // Data are things you observe/condition on
 data {
-  // number of data items (an integer)
-  int<lower=0> N;
+  // number of data items
+  int<lower=1> N;
   // Number of beta parameters (predictors)
-  int<lower=0> p;
-  int<lower=0> K;      // number of predictors
-  real<lower=0> pr_sd; // std dev of the prior
-  matrix[N, p-1] x;      // predictor matrix
-
-  // Covariates
-  int <lower=0, upper=1> intercept[N];
-  int <lower=0, upper=1> x1[N];
-  int <lower=0, upper=1> x2[N];
-  int <lower=0, upper=1> x1^2[N];
-  int <lower=0, upper=1> x2^2[N];
-  int <lower=0, upper=1> x1*x2[N];
+  int<lower=1> p;
+  // std dev of the prior
+  real<lower=0> pr_sd;
 
   // offset
-  real offset[N];
+  // real offset[N];
 
   // count outcome (output vector)
   int<lower=0> y[N];
 
 }
-// Parameters to estimate
+
 parameters {
-  //vector[K] beta;       // coefficients for predictors
-  real<lower=0> sigma;  // error scale
-  real<lower=0> lambda[N]; // Poisson rate
-  real beta[p];
+  // Parameters to estimate
+  vector[p] beta;
 }
+
 // useful to avoid repeating calculations
-// note that stan will return values of these variables
-// for each MCMC sample
+// note that stan will return values of these variables for each MCMC sample
 transformed parameters {
-  
-  real lp[N];
-  real <lower=0> mu[N];
-  vector[N] lambda = exp(x * beta); // Poisson rate
+  vectior[N] 
   
   for (i in 1:N) {
     // Linear predictor
-    // lp[i] = poisson_log_lpmf(y[i] | lambda[i]);
-    lp[i] <- beta[1] + beta[2] * x1[i] + beta[3] * x2[i] + beta[4] * x1[i]^2 + beta[5] * x2[i]^2 + beta[6] * x1[i] * x2[i] + offset[i];
-    mu[i] = exp(lp[i]);
+    lp[i] = beta[1] + beta[2] * x1[i] + beta[3] * x2[i] + beta[4] * x1_sq[i] + beta[5] * x2_sq[i] + beta[6] * x1_x2[i];
 
     // Mean (= lambda) for Poisson 
-    mu[i] <- exp(lp[i]);
+    mu[i] = exp(lp[i]);
   }
 }
+
+transformed parameters {
+  vector[N] mu = x * beta;
+}
+
 // The actual Bayesian model goes here
-// This is the prior and likelihood and I set normal dist as a prior for beta
+// I set normal dist as a prior for beta
 model {
-  beta ~ normal(0,pr_sd);  // Note: beta is k-dim
-  sigma ~ inv_gamma(0.001,0.001);  // Close to a flat prior
-  y ~ poisson(lambda);  // likelihood
-}
-// useful for posterior predictive checks
-// Stan's posterior sampler will account for the estimation uncertainty
-generated quantities {
-  // define variables that are computed or generated during the execution of the model's sampling algorithm
-  int<lower=0> y_tilde[N];
-  for (i in 1:N) {
-    y_tilde[i] = poisson_rng(lambda[i]);
-  }
-  vector[N] f = beta[1] + beta[2] * x[,1] + beta[3] * x[,2] + beta[4] * x[,1].^2 + beta[5] * x[,2].^2 + beta[6] * x[,1] .* x[,2];
+  // priors
+  beta ~ normal(0, pr_sd);  // Note: beta is k-dim
   
-} "
+  // likelihood
+  y ~ poisson(mu);  // likelihood
+}
+"
 
 # build the model before sampling
-linreg_normal <- stan_model(model_code = linreg_normal_code)
+poissonreg_normal <- stan_model(model_code = poissonreg_normal_code)
+
+```
+
+data preparation
+```{r}
+modMat <- as.data.frame(model.matrix(glm1))
+# modMat$offset <- 1
+names(modMat) <- c("intercept", "x1", "x2", "x1_sq", "x2_sq", "x1_x2")
+dat <- as.list(modMat)
+dat$y <- df$y
+dat$N <- nrow(modMat)
+dat$p <- ncol(modMat)
+# set the prior sd slightly large than the sd of the data to make it less informative
+dat$pr_sd <- 10
 ```
 
 compile the model
@@ -187,15 +176,15 @@ compile the model
 Regression model: \(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \{0, 1, \ldots\}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\). We model \(y_i\) as
 \[y_i | \beta \sim \text{Poisson}(e^{f(x_i,\beta)})\]
 ```{r}
-reg1_data <- list(N = nrow(X), K = 6, pr_sd = 100, x = X, y = y)
+# reg1_data <- list(N = nrow(X), K = 6, pr_sd = 100, x = X, y = y)
 # run the built model with given data (chains = 2 can  be okay for verification process, but it should be 4 or more for the actual analysis)
-nfit <- sampling(
-  linreg_normal,
-  data = reg1_data,
-  iter = 10000,
+nfit <- stan(
+  model_code = poissonreg_normal,
+  data = dat,
+  iter = 8000,
   warmup = 2000,
   chains = 2
-  )
+)
 ```
 
 ```{r}
@@ -209,9 +198,6 @@ saveRDS(nfit, file = file.path(OUTPUT_DIR, "nfit.rds"))
 post_smp <- as.data.frame(nfit)
 colnames(post_smp)[0:2] <- colnames(X)
 mcmc_areas(post_smp[,0:2], pars = colnames(X)[0:2], prob = 0.8)
-```
-
-```{r}
 ```
 
 ```{r}
@@ -234,17 +220,7 @@ stan_dens(nfit, pars = c("beta", "sigma"), separate_chains = TRUE)
 stan_ac(nfit, pars = c("beta", "sigma"), separate_chains = TRUE)
 ```
 
-```{r}
-```
 
-```{r}
-```
-
-```{r}
-```
-
-```{r}
-```
 
 # Applied problem
 
@@ -265,3 +241,5 @@ output_path <- file.path(OUTPUT_DIR, "design1.csv")
 # write a table and save it to csv
 # write.table(design1, file = output_path, sep = ",", col.names = F, row.names = F)
 ```
+
+
