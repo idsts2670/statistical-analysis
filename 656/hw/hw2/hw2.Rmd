@@ -63,12 +63,12 @@ read_csv <- function(name, ...) {
 ```
 
 # Synthetic data
-\textbf{The file `hw2 synthetic.csv` is a dataset of count-valued measurements \(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \{0, 1, \ldots\}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\). We model \(y_i\) as
+The file `hw2 synthetic.csv` is a dataset of count-valued measurements \(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \{0, 1, \ldots\}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\). We model \(y_i\) as
 \[y_i | \beta \sim \text{Poisson}(e^{f(x_i,\beta)})\]
-Here, the exponential is to ensure the Poisson rate is always positive, and the function \(f(x_i,\beta) = \beta_0 + \beta_1x_{i,1} + \beta_2x_{i,2} + \beta_3x_{i,1}^2 + \beta_4x_{i,2}^2 + \beta_5x_{i,1}x_{i,2}\).}
+Here, the exponential is to ensure the Poisson rate is always positive, and the function \(f(x_i,\beta) = \beta_0 + \beta_1x_{i,1} + \beta_2x_{i,2} + \beta_3x_{i,1}^2 + \beta_4x_{i,2}^2 + \beta_5x_{i,1}x_{i,2}\).
 
-1. \textbf{With the provided data, perform a Bayesian analysis on the parameters of the model above to decide which terms in the expression for f(x) you think are important. \
-State clearly what your prior over beta is, and how you arrived at your conclusion, including any useful figures (especially of the posterior distribution). You can use Stan.}
+1. With the provided data, perform a Bayesian analysis on the parameters of the model above to decide which terms in the expression for f(x) you think are important. \
+State clearly what your prior over beta is, and how you arrived at your conclusion, including any useful figures (especially of the posterior distribution). You can use Stan.
 ```{r}
 df <- read.csv("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/data/hw2_synthetic.csv")
 head(df)
@@ -96,8 +96,19 @@ df$offset <- 1
 ```
 
 
-## Stan coding
-Model Specification with Stan
+I have used Stan to perform the Bayesian analysis.\
+Since I have less prior knowledge of the data, I set the prior for the parameters as close to the flat prior by normal distribution with a large standard deviation, N(0, 100).\
+We assume
+\(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \{0, 1, \ldots\}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\). \
+We model \(y_i\) as
+\[y_i | \beta \sim \text{Poisson}(e^{f(x_i,\beta)})\
+] where the exponential is to ensure the Poisson rate is always positive
+
+The Regression model which I used for the analysis is as below.\
+Regression model: 
+[
+  f(x_i, \beta) = \beta_0 + \beta_1 x_{i, 1} + \beta_2 x_{i, 2} + \beta_3 x_{i, 1}^2 + \beta_4 x_{i, 2}^2 + \beta_5 x_{i, 1} x_{i, 2}
+]
 ```{r}
 
 poissonreg_normal_code = "
@@ -146,6 +157,7 @@ model {
 
 // Generate quantities of interest (e.g. posterior predictions)
 generated quantities {
+  
   int<lower=0> y_rep[N];
 
   for (i in 1:N) {
@@ -157,19 +169,14 @@ generated quantities {
 # build the model before sampling
 poissonreg_normal <- stan_model(model_code = poissonreg_normal_code)
 
-```
 
-data preparation for stan simulation
-```{r}
 # create the data for stan simulation
 X <- df[, c("x1", "x2", "x1_sq", "x2_sq", "x1_x2", "offset")]
 y <- df$y
 ```
 
-### compile the model
-Regression model: \(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \{0, 1, \ldots\}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\). We model \(y_i\) as
-\[y_i | \beta \sim \text{Poisson}(e^{f(x_i,\beta)})\]
 ```{r}
+# compile the model
 poissonreg_data <- list(N = nrow(X), p = ncol(X), pr_sd = 100, x = X, y = y)
 nfit <- rstan::sampling(
   object = poissonreg_normal,
@@ -194,6 +201,11 @@ mcmc_areas(post_smp, pars = colnames(X), prob = 0.8)
 mcmc_dens(post_smp[, 5:6], alpha = 0.5)
 ```
 
+2. Having decided which terms in f are important, keep only those and discard the rest, resulting in a possibly simpler model. \
+Now perform a Bayesian analysis over the parameters of this model. \
+Note that you are using the data twice, once to select the model and next to fit the it, but we will not worry about that. \
+Compare the posteriors for both models.
+
 
 
 
@@ -212,9 +224,9 @@ set.seed(49)
 modA <- rep(seq(0, 75, by = 15), each = 4)
 modB <- rep(seq(0, 30, by = 10), times = 6)
 design1 <- cbind(modA, modB)
-output_path <- file.path(OUTPUT_DIR, "design1.csv")
 # write a table and save it to csv
-# write.table(design1, file = output_path, sep = ",", col.names = F, row.names = F)
+write.table(design1, file = file.path(OUTPUT_DIR, "design1.csv"), sep = ",", col.names = F, row.names = F)
 ```
 
 
+## second design selection
