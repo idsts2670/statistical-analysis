@@ -72,7 +72,7 @@ df <- read.csv("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/data
 head(df)
 ```
 
-## Data Creation for Stan coding
+Data Creation for Stan coding
 ```{r}
 # create the data for poisson regression model
 df$x1_sq <- df$x1^2
@@ -81,8 +81,7 @@ df$x1_x2 <- df$x1 * df$x2
 df$offset <- 1
 ```
 
-1. **With the provided data, perform a Bayesian analysis on the parameters of the model above to decide which terms in the expression for f(x) you think are important. \
-State clearly what your prior over beta is, and how you arrived at your conclusion, including any useful figures (especially of the posterior distribution). You can use Stan.**
+1. **With the provided data, perform a Bayesian analysis on the parameters of the model above to decide which terms in the expression for f(x) you think are important. State clearly what your prior over beta is, and how you arrived at your conclusion, including any useful figures (especially of the posterior distribution). You can use Stan.**
 
 Summary of the data
 ```{r}
@@ -174,8 +173,9 @@ generated quantities {
 
 # build the model before sampling
 poissonreg_normal <- stan_model(model_code = poissonreg_normal_code)
+```
 
-
+```{r}
 # create the data for stan simulation
 X <- df[, c("x1", "x2", "x1_sq", "x2_sq", "x1_x2", "offset")]
 y <- df$y
@@ -201,14 +201,13 @@ nfit <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/
 ```
 
 
-2. **Having decided which terms in f are important, keep only those and discard the rest, resulting in a possibly simpler model. \  **
-Now perform a Bayesian analysis over the parameters of this model. \
-Note that you are using the data twice, once to select the model and next to fit the it, but we will not worry about that. \
-Compare the posteriors for both models.**
+2. **Having decided which terms in f are important, keep only those and discard the rest, resulting in a possibly simpler model. Now perform a Bayesian analysis over the parameters of this model. Note that you are using the data twice, once to select the model and next to fit the it, but we will not worry about that. Compare the posteriors for both models.**
 
 The posterior distribution of the parameters are as below.\
-As we can see the output of the model, the parameter `x1_sq` and `x1_x2` are not significant in the model.\
-I will remove these parameters from the model and run the model again.
+After considering the outputs of the model and fact that the parameter `x1_sq` and `x1_x2` are not significant in the model, I decided to remove these parameters from the model and run the model again.
+As the result, \(x_1\) and \(x_2\) still seem to be significant in the model, while \(x_2 ^ 2\) seems not significant.\
+There is a possibility that the \(x_2\) and \(x_2 ^ 2\) are correlated, and have a multicollinearity problem.\
+Yet, it does not seem to be serious problem in this case, since the \(x_2\) and \(x_2 ^ 2\) are not highly correlated. Hence, I decided to keep the \(x_2\) in the model.
 
 ```{r}
 # extract the posterior samples for further analysis
@@ -217,12 +216,9 @@ colnames(post_smp) <- colnames(X)
 ```
 
 ```{r fig.show="hold", out.width="50%"}
-mcmc_areas(post_smp, pars = colnames(X), prob = 0.8)
-mcmc_dens(post_smp[, 5:6], alpha = 0.5)
-```
-
-```{r fig.show="hold", out.width="50%"}
 plot(post_smp$x1, type = "l")
+# trace plot
+# traceplot(nfit, pars = c("mu"), inc_warmup = TRUE)
 ```
 
 ```{r fig.show="hold", out.width="50%"}
@@ -238,13 +234,13 @@ ppd_intervals(t(t(y_rep) - y), x = y) +
   ggplot2::labs(y = "Errors in predicted Y's", x = "Observed Y's")
 ```
 
-model without `x1_sq` and `x1_x2`
+**model without `x1_sq` and `x1_x2`**
 ```{r}
-X <- df[, c("x1", "x2", "x2_sq", "offset")]
+X2 <- df[, c("x1", "x2", "x2_sq", "offset")]
 y <- df$y
 
 # compile the model
-poissonreg_data2 <- list(N = nrow(X), p = ncol(X), pr_sd = 100, x = X, y = y)
+poissonreg_data2 <- list(N = nrow(X2), p = ncol(X2), pr_sd = 100, x = X2, y = y)
 nfit2 <- rstan::sampling(
   object = poissonreg_normal,
   data = poissonreg_data2,
@@ -260,6 +256,23 @@ saveRDS(nfit2, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/h
 # read the model (-> In this way, no need to run the model again)
 nfit2 <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit2.rds")
 ```
+
+extract the posterior samples for further analysis
+```{r}
+post_smp2 <- as.data.frame(nfit2)[, c(1, 2, 3, 4)]
+colnames(post_smp2) <- colnames(X2)
+```
+
+```{r fig.show="hold", out.width="50%"}
+# plot comparison of the two models
+mcmc_areas(post_smp, pars = colnames(X), prob = 0.8)
+mcmc_areas(post_smp2, pars = colnames(X2), prob = 0.8)
+```
+
+3. **Perform posterior predictive checks for both models, being sure to explain what you are doing. Which model do you think fits the data better?**
+
+
+
 
 # Applied problem
 

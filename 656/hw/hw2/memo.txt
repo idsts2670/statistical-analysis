@@ -1,0 +1,181 @@
+```{r}
+poissonreg_pirornormal_code = "
+// Data are things you observe/condition on
+data {
+  // number of data items (an integer)
+  int<lower=0> N;
+  // Number of beta parameters (predictors)
+  int<lower=0> p;
+  int<lower=0> K;      // number of predictors
+  real<lower=0> pr_sd; // std dev of the prior
+  matrix[N, p-1] x;      // predictor matrix
+
+  // Covariates
+  int <lower=0, upper=1> intercept[N];
+  int <lower=0, upper=1> x1[N];
+  int <lower=0, upper=1> x2[N];
+  int <lower=0, upper=1> x1^2[N];
+  int <lower=0, upper=1> x2^2[N];
+  int <lower=0, upper=1> x1*x2[N];
+
+  // offset
+  real offset[N];
+
+  // count outcome (output vector)
+  int<lower=0> y[N];
+
+}
+// Parameters to estimate
+parameters {
+  // vector[K] beta;       // coefficients for predictors
+  // real<lower=0> sigma;  // error scale
+  real<lower=0> lambda[N]; // Poisson rate
+  real beta[p];
+}
+// useful to avoid repeating calculations
+// note that stan will return values of these variables
+// for each MCMC sample
+transformed parameters {
+  
+  real lp[N];
+  real <lower=0> mu[N];
+  vector[N] lambda = exp(x * beta); // Poisson rate
+  
+  for (i in 1:N) {
+    // Linear predictor
+    // lp[i] = poisson_log_lpmf(y[i] | lambda[i]);
+    lp[i] <- beta[1] + beta[2] * x1[i] + beta[3] * x2[i] + beta[4] * x1[i]^2 + beta[5] * x2[i]^2 + beta[6] * x1[i] * x2[i] + offset[i];
+    mu[i] = exp(lp[i]);
+
+    // Mean (= lambda) for Poisson 
+    mu[i] <- exp(lp[i]);
+  }
+}
+// The actual Bayesian model goes here
+// This is the prior and likelihood and I set normal dist as a prior for beta
+model {
+  // priors
+  beta ~ normal(0,pr_sd);  // Note: beta is k-dim
+  // sigma ~ inv_gamma(0.001,0.001);  // Close to a flat prior
+  
+  // likelihood
+  y ~ poisson(mu);  // likelihood
+}
+// useful for posterior predictive checks
+// Stan's posterior sampler will account for the estimation uncertainty
+// generated quantities {
+  // define variables that are computed or generated during the execution of the model's sampling algorithm
+  // int<lower=0> y_tilde[N];
+  // for (i in 1:N) {
+  //  y_tilde[i] = poisson_rng(lambda[i]);
+  // }
+  // vector[N] f = beta[1] + beta[2] * x[,1] + beta[3] * x[,2] + beta[4] * x[,1].^2 + beta[5] * x[,2].^2 + beta[6] * x[,1] .* x[,2];
+  
+// } 
+"
+
+library(conflicted)
+conflict_prefer("sampling", "rstan")
+```
+
+
+
+
+
+
+
+poissonreg_normal_code = "
+// Poisson model with normal prior
+
+// Data are things you observe/condition on
+data {
+  // number of data items
+  int<lower=0> N;
+  // Number of beta parameters (predictors)
+  int<lower=0> p;
+  // std dev of the prior
+  real<lower=0> pr_sd;
+
+  // Covariates
+  real intercept[N];
+  real x1[N];
+  real x2[N];
+  real x1_sq[N];
+  real x2_sq[N];
+  real x1_x2[N];
+
+  // offset
+  // real offset[N];
+
+  // count outcome (output vector)
+  int<lower=0> y[N];
+
+}
+
+parameters {
+  // Parameters to estimate
+  real beta[p];
+  // vector[p] beta;
+}
+
+// useful to avoid repeating calculations
+// note that stan will return values of these variables for each MCMC sample
+transformed parameters {
+  real lp[N];
+  real <lower=0> mu[N];
+  
+  for (i in 1:N) {
+    // Linear predictor
+    lp[i] = beta[1] + beta[2] * x1[i] + beta[3] * x2[i] + beta[4] * x1_sq[i] + beta[5] * x2_sq[i] + beta[6] * x1_x2[i];
+
+    // Mean (= lambda) for Poisson 
+    mu[i] = exp(lp[i]);
+  }
+}
+
+transformed parameters {
+  vector[N] mu = x * beta;
+}
+
+// The actual Bayesian model goes here
+// I set normal dist as a prior for beta
+model {
+  // priors
+  beta ~ normal(0, pr_sd);  // Note: beta is k-dim
+  
+  // likelihood
+  y ~ poisson(mu);  // likelihood
+}
+"
+
+# build the model before sampling
+poissonreg_normal <- stan_model(model_code = poissonreg_normal_code)
+
+
+
+
+
+
+```{r}
+plot(post_smp$, type = 'l')
+```
+
+```{r}
+# trace plot
+stan_trace(nfit, pars = colnames(X))
+```
+
+```{r}
+# posterior histogram plot
+stan_hist(nfit, pars = c("beta", "sigma"))
+```
+
+```{r}
+# density plot
+stan_dens(nfit, pars = c("beta", "sigma"), separate_chains = TRUE)
+```
+
+```{r}
+# auto correlation plot
+stan_ac(nfit, pars = c("beta", "sigma"), separate_chains = TRUE)
+```
