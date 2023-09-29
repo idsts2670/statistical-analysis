@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
 
 ```{r}
 library("ggplot2")
-# library("dplyr")
+library("dplyr")
 library("tidyr")
 library("MASS")
 library("fs")
@@ -145,7 +145,7 @@ parameters {
 // useful to avoid repeating calculations
 // note that stan will return values of these variables for each MCMC sample
 transformed parameters {
-  // Linear predictor
+  // exp of linear predictor
   vector[N] mu = exp(x * beta);
 }
 
@@ -195,7 +195,7 @@ nfit <- rstan::sampling(
 
 ```{r}
 # save the model
-saveRDS(nfit, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit.rds")
+# saveRDS(nfit, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit.rds")
 # read the model (-> In this way, no need to run the model again)
 nfit <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit.rds")
 ```
@@ -235,10 +235,12 @@ ppd_intervals(t(t(y_rep) - y), x = y) +
 ```
 
 **model without `x1_sq` and `x1_x2`**
+
 ```{r}
 X2 <- df[, c("x1", "x2", "x2_sq", "offset")]
 y <- df$y
-
+```
+```{r}
 # compile the model
 poissonreg_data2 <- list(N = nrow(X2), p = ncol(X2), pr_sd = 100, x = X2, y = y)
 nfit2 <- rstan::sampling(
@@ -295,3 +297,158 @@ write.table(design1, file = file.path(OUTPUT_DIR, "design1.csv"), sep = ",", col
 
 
 ## second design selection
+Based on the result of the first experiment, I will take a Bayesian approach to run the second experiment with 48 wells.
+Mainly, I will take the following five steps to create the second experiment design.
+* Build Bayesian Model: Perform Bayesian inference on the first 24 runs to estimate the model parameters.
+* Create Contour Plot: Use the estimated parameters to create a contour plot of the posterior predictive mean of conversion as a function of concentration settings for modulator A and modulator B.
+* Optimization: Find the concentration settings that maximize the posterior predictive mean of conversion using an optimization algorithm.
+* Posterior Predictive Distribution: Calculate the posterior predictive distribution of the concentration settings that yield maximum conversion.
+* Posterior Predictive Distribution of Conversion: Construct the posterior predictive distribution of the conversion corresponding to the maximum conversion concentration settings.
+
+
+```{r}
+# resulf of the first experiment
+design1_result <- read.table("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/data/rslt1.csv")
+design1_result
+```
+
+```{r}
+summary(design1_result)
+# sd of x1 and x2
+colnames(design1_result) <- c("A", "B", "y")
+paste0("sd of A:", sd(design1_result$A), " | ", " sd of B: ", sd(design1_result$B), " | ", " sd of y: ", sd(design1_result$y))
+
+```
+
+```{r fig.show="hold", out.width="50%"}
+plot(design1_result)
+hist(design1_result$A)
+hist(design1_result$B)
+hist(design1_result$y)
+```
+
+```{r}
+design1_result %>%
+  group_by(A) %>%
+    summarise_at(vars(y), list(name = mean))
+```
+
+As we can see the result of the first design and its scatter plot, the modulators are correlated with each other and have some effect on the conversion. \
+For instance, when the value of Modulator B are either 0 or 30, the conversion became lower, meanwhile it became higher when Modulator B are either 10, 20. \
+Also, as we can see from the average of each level in modulator A, there seems to be a tipping point around 60.\
+Therefore I set `Inver-Gamma` distribution (\sim) \((\alpha = 1, \beta = 1)\) as a prior for the parameters of the modulators, and use the following model to estimate the parameters of the modulators.
+
+Upon runnning the model, I assume
+\(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \mathbb{R}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\). \
+We model \(y_i\) as
+\[y_i | \beta \sim \text{Normal}(____)\
+]
+
+
+Stan code for the model simulation
+```{r}
+linreg_normal_code = "
+// regression model with normal prior for beta
+
+// Data are things you observe/condition on
+data {
+  
+  int<lower=1> N; // number of data items
+  int<lower=1> p; // Number of beta parameters (predictors)
+  matrix[N, p] x; // Matrix of predictors
+  real<lower=0> alpha; // Shape parameter for Inverse-Gamma
+  real<lower=0> beta; // Scale parameter for Inverse-Gamma
+  real<lower=0> pr_sd; // Prior standard deviation for beta
+
+  real y[N]; // output vector
+  
+  // real offset[N]; // offset
+}
+
+parameters {
+  
+  vector[p] Rho; // Parameters to estimate
+  real<lower=0> sigma; // Standard deviation
+}
+
+// useful to avoid repeating calculations
+// note that stan will return values of these variables for each MCMC sample
+transformed parameters {
+  
+  vector[N] mu = x * Rho; // Linear predictor
+}
+
+// The actual Bayesian model goes here
+// I set normal dist as a prior for Rho
+model {
+  
+  // priors
+  Rho ~ normal(0, pr_sd); // Note: Rho is p-dim
+  sigma ~ inv_gamma(alpha, beta);
+  y ~ normal(mu, sigma); // likelihood
+}
+
+// Generate quantities of interest
+generated quantities {
+  
+  real y_rep[N];
+  for (i in 1:N) {
+    y_rep[i] = normal_rng(mu[i], sigma);
+  }
+}
+"
+
+# build the model before sampling
+poissonreg_normal <- stan_model(model_code = linreg_normal_code)
+```
+
+```{r}
+# create the data for a regression model
+design1_result$A_sq <- design1_result$A^2
+design1_result$B_sq <- design1_result$B^2
+design1_result$A_B <- design1_result$A * design1_result$B
+
+# create the data for stan simulation
+X <- design1_result[, c("A", "B", "A_sq", "B_sq", "A_B")]
+y <- design1_result$y
+```
+
+```{r}
+# compile the model
+reg1_data <- list(N = nrow(X), p = ncol(X),  x = X, y = y, alpha = 1, beta = 1, pr_sd = 100)
+reg_fit <- rstan::sampling(
+  object = poissonreg_normal,
+  data = reg1_data,
+  iter = 10000,
+  warmup = 2000,
+  chains = 2
+)
+```
+
+```{r}
+# save the model
+saveRDS(reg_fit, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit.rds")
+# read the model
+reg_fit <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit.rds")
+```
+
+
+Once we have the posterior distributions of the parameters, we can use them to generate the posterior predictive distribution of conversion for any given pair of concentrations.
+Here, I also created a contour plot of the posterior predictive mean of conversion as a function of concentration settings to visualize the relationship between the modulators and conversion.
+
+```{r}
+# Extract samples from a fitted Stan model
+posterior_samples <- as.data.frame(rstan::extract(reg_fit, permuted = TRUE))
+
+# Define a grid of concentration sequences for the two modulators
+modulator_A_seq <- seq(0, 80, length.out = 100)
+modulator_B_seq <- seq(0, 30, length.out = 100)
+
+# Create a grid of concentration pairs for the two modulators
+grid <- expand.grid(modulator_A = modulator_A_seq, modulator_B = modulator_B_seq)
+
+# Compute the posterior predictive mean of conversion for each pair of concentration settings
+predictive_means <- apply(grid, 1, function(row) {
+  modulator_A <- row["modulator_A"]
+  modulator_B <- row["modulator_B"]
+```
