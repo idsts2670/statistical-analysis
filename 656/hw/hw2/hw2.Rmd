@@ -419,9 +419,9 @@ reg1_data <- list(N = nrow(X), p = ncol(X),  x = X, y = y, alpha = 1, beta = 1, 
 reg_fit <- rstan::sampling(
   object = poissonreg_normal,
   data = reg1_data,
-  iter = 10000,
-  warmup = 2000,
-  chains = 2
+  iter = 2500,
+  warmup = 800,
+  chains = 4
 )
 ```
 
@@ -440,6 +440,16 @@ Here, I also created a contour plot of the posterior predictive mean of conversi
 # Extract samples from a fitted Stan model
 posterior_samples <- as.data.frame(rstan::extract(reg_fit, permuted = TRUE))
 
+# Extract the summary of the fit
+fit_summary <- summary(reg_fit)$summary
+# extract them individually
+rho_1_mean <- fit_summary["Rho[1]", "mean"]
+rho_2_mean <- fit_summary["Rho[2]", "mean"]
+rho_3_mean <- fit_summary["Rho[3]", "mean"]
+rho_4_mean <- fit_summary["Rho[4]", "mean"]
+rho_5_mean <- fit_summary["Rho[5]", "mean"]
+rho_6_mean <- fit_summary["Rho[6]", "mean"]
+
 # Define a grid of concentration sequences for the two modulators
 modulator_A_seq <- seq(0, 80, length.out = 100)
 modulator_B_seq <- seq(0, 30, length.out = 100)
@@ -447,8 +457,35 @@ modulator_B_seq <- seq(0, 30, length.out = 100)
 # Create a grid of concentration pairs for the two modulators
 grid <- expand.grid(modulator_A = modulator_A_seq, modulator_B = modulator_B_seq)
 
-# Compute the posterior predictive mean of conversion for each pair of concentration settings
-predictive_means <- apply(grid, 1, function(row) {
+# Create the function for it
+mean_predictives <- function(row) {
   modulator_A <- row["modulator_A"]
   modulator_B <- row["modulator_B"]
+  # Compute the predictive mean using the model equation and the posterior samples
+  mean_predictive <- mean(rho_1_mean + 
+                          rho_2_mean * modulator_A +
+                          rho_3_mean * modulator_B +
+                          rho_4_mean * modulator_A^2 +
+                          rho_5_mean * modulator_B^2 +
+                          rho_6_mean * (modulator_A * modulator_B)
+                          )
+  return(mean_predictive)
+  }
+
+# Compute the posterior predictive mean of conversion for each pair of concentration settings
+predictive_means <- apply(grid, 1, mean_predictives)
+
+# Add the computed predictive means to the grid
+grid$predictive_mean <- predictive_means
+
+
+
+ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean)) +
+  geom_contour(aes(color = ..level..)) +
+  scale_color_viridis_c() +
+  labs(title = "Contour Plot of Posterior Predictive Mean of Conversion",
+       x = "Modulator A",
+       y = "Modulator B",
+       color = "Predictive Mean") +
+  theme_minimal()
 ```
