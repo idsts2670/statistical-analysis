@@ -458,11 +458,9 @@ modulator_B_seq <- seq(0, 30, length.out = 100)
 grid <- expand.grid(modulator_A = modulator_A_seq, modulator_B = modulator_B_seq)
 
 # Create the function for it
-mean_predictives <- function(row) {
-  modulator_A <- row["modulator_A"]
-  modulator_B <- row["modulator_B"]
+mean_predictives <- function(modulator_A, modulator_B) {
   # Compute the predictive mean using the model equation and the posterior samples
-  mean_predictive <- mean(rho_1_mean + 
+  mean_predictive <- mean(rho_1_mean +
                           rho_2_mean * modulator_A +
                           rho_3_mean * modulator_B +
                           rho_4_mean * modulator_A^2 +
@@ -471,6 +469,22 @@ mean_predictives <- function(row) {
                           )
   return(mean_predictive)
   }
+
+reg_lik <- outer(modulator_A_seq, modulator_B_seq, mean_predictives)
+# # Create the function for it
+# mean_predictives <- function(row) {
+#   modulator_A <- row["modulator_A"]
+#   modulator_B <- row["modulator_B"]
+#   # Compute the predictive mean using the model equation and the posterior samples
+#   mean_predictive <- mean(rho_1_mean + 
+#                           rho_2_mean * modulator_A +
+#                           rho_3_mean * modulator_B +
+#                           rho_4_mean * modulator_A^2 +
+#                           rho_5_mean * modulator_B^2 +
+#                           rho_6_mean * (modulator_A * modulator_B)
+#                           )
+#   return(mean_predictive)
+#   }
 
 # Compute the posterior predictive mean of conversion for each pair of concentration settings
 predictive_means <- apply(grid, 1, mean_predictives)
