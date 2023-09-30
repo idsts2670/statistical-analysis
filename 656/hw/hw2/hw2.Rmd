@@ -292,7 +292,7 @@ modA <- rep(seq(0, 75, by = 15), each = 4)
 modB <- rep(seq(0, 30, by = 10), times = 6)
 design1 <- cbind(modA, modB)
 # write a table and save it to csv
-write.table(design1, file = file.path(OUTPUT_DIR, "design1.csv"), sep = ",", col.names = F, row.names = F)
+write.table(design1, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/design1.csv", sep = ",", col.names = F, row.names = F)
 ```
 
 
@@ -309,13 +309,13 @@ Mainly, I will take the following five steps to create the second experiment des
 ```{r}
 # resulf of the first experiment
 design1_result <- read.table("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/data/rslt1.csv")
+colnames(design1_result) <- c("A", "B", "y")
 design1_result
 ```
 
 ```{r}
 summary(design1_result)
-# sd of x1 and x2
-colnames(design1_result) <- c("A", "B", "y")
+# sd of A and B
 paste0("sd of A:", sd(design1_result$A), " | ", " sd of B: ", sd(design1_result$B), " | ", " sd of y: ", sd(design1_result$y))
 
 ```
@@ -328,8 +328,14 @@ hist(design1_result$y)
 ```
 
 ```{r}
+# mean of each level in modulator A
 design1_result %>%
   group_by(A) %>%
+    summarise_at(vars(y), list(name = mean))
+
+# mean of each level in modulator B
+design1_result %>%
+  group_by(B) %>%
     summarise_at(vars(y), list(name = mean))
 ```
 
@@ -347,7 +353,7 @@ We model \(y_i\) as
 
 Stan code for the model simulation
 ```{r}
-linreg_normal_code = "
+reg_half_cauchy_code = "
 // regression model with normal prior for beta
 
 // Data are things you observe/condition on
@@ -356,18 +362,13 @@ data {
   int<lower=1> N; // number of data items
   int<lower=1> p; // Number of beta parameters (predictors)
   matrix[N, p] x; // Matrix of predictors
-  real<lower=0> alpha; // Shape parameter for Inverse-Gamma
-  real<lower=0> beta; // Scale parameter for Inverse-Gamma
   real<lower=0> pr_sd; // Prior standard deviation for beta
-
   real y[N]; // output vector
-  
-  // real offset[N]; // offset
 }
 
 parameters {
   
-  vector[p] Rho; // Parameters to estimate
+  vector[p] beta; // Parameters to estimate
   real<lower=0> sigma; // Standard deviation
 }
 
@@ -375,34 +376,39 @@ parameters {
 // note that stan will return values of these variables for each MCMC sample
 transformed parameters {
   
-  vector[N] mu = x * Rho; // Linear predictor
+  vector[N] mu = x * beta; // Linear predictor
 }
 
 // The actual Bayesian model goes here
-// I set normal dist as a prior for Rho
+// I set normal dist as a prior for beta
 model {
   
   // priors
-  Rho ~ normal(0, pr_sd); // Note: Rho is p-dim
-  sigma ~ inv_gamma(alpha, beta);
+  beta ~ normal(0, pr_sd); // Note: beta is p-dim
+  sigma ~ cauchy(0, 5); // Half-Cauchy prior for sigma with scale parameter 5 (adjust as needed)
   y ~ normal(mu, sigma); // likelihood
 }
 
 // Generate quantities of interest
 generated quantities {
-  
+  real log_lik[N]; // log likelihood for each observation
   real y_rep[N];
   for (i in 1:N) {
     y_rep[i] = normal_rng(mu[i], sigma);
+    log_lik[i] = normal_lpdf(y[i] | mu[i], sigma); // compute log likelihood for each observation
   }
 }
 "
 
 # build the model before sampling
-poissonreg_normal <- stan_model(model_code = linreg_normal_code)
+reg_half_cauchy <- stan_model(model_code = reg_half_cauchy_code)
 ```
 
 ```{r}
+# standardize the data
+design1_result$A <- (design1_result$A - mean(design1_result$A)) / sd(design1_result$A)
+design1_result$B <- (design1_result$B - mean(design1_result$B)) / sd(design1_result$B)
+
 # create the data for a regression model
 design1_result$A_sq <- design1_result$A^2
 design1_result$B_sq <- design1_result$B^2
@@ -410,17 +416,18 @@ design1_result$A_B <- design1_result$A * design1_result$B
 
 # create the data for stan simulation
 X <- design1_result[, c("A", "B", "A_sq", "B_sq", "A_B")]
+X[, "Offset"] <- 1
 y <- design1_result$y
 ```
 
 ```{r}
 # compile the model
-reg1_data <- list(N = nrow(X), p = ncol(X),  x = X, y = y, alpha = 1, beta = 1, pr_sd = 100)
+reg1_data <- list(N = nrow(X), p = ncol(X), x = X, y = y, pr_sd = 100)
 reg_fit <- rstan::sampling(
-  object = poissonreg_normal,
+  object = reg_half_cauchy,
   data = reg1_data,
-  iter = 2500,
-  warmup = 800,
+  iter = 10000,
+  warmup = 1000,
   chains = 4
 )
 ```
@@ -432,68 +439,114 @@ saveRDS(reg_fit, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw
 reg_fit <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit.rds")
 ```
 
+Check the result of the model
+```{r}
+post_smp_reg <- as.data.frame(reg_fit)
+# rename the columns
+colnames(post_smp_reg)[1:6] <- colnames(X)
+mcmc_areas(post_smp_reg[, 1:6], pars = colnames(X)[1:6], prob = 0.8)
+```
+
+Bayesian model selection
+```{r}
+# Compute LOO-CV for the first model
+loo_all <- loo(reg_fit)
+
+# Fit the second model (without A_sq predictor)
+X_without_A_sq <- X[, !colnames(X) %in% "A_sq"]
+reg1_data_without_A_sq <- list(N = nrow(X_without_A_sq), p = ncol(X_without_A_sq), x = X_without_A_sq, y = y, pr_sd = 100)
+reg_fit_without_A_sq <- rstan::sampling(
+  object = reg_half_cauchy,
+  data = reg1_data_without_A_sq,
+  iter = 10000,
+  warmup = 1000,
+  chains = 4
+)
+# Compute LOO-CV for the second model
+loo_without_A_sq <- loo(reg_fit_without_A_sq)
+
+# Fit the thrid model (without A_sq predictor)
+X_without_B_sq <- X[, !colnames(X) %in% "B_sq"]
+reg1_data_without_B_sq <- list(N = nrow(X_without_B_sq), p = ncol(X_without_B_sq), x = X_without_B_sq, y = y, pr_sd = 100)
+reg_fit_without_B_sq <- rstan::sampling(
+  object = reg_half_cauchy,
+  data = reg1_data_without_B_sq,
+  iter = 10000,
+  warmup = 1000,
+  chains = 4
+)
+# Compute LOO-CV for the thrid model
+loo_without_B_sq <- loo(reg_fit_without_B_sq)
+
+# Compare the models
+loo::loo_compare(loo_all, loo_without_A_sq)
+loo::loo_compare(loo_all, loo_without_B_sq)
+loo::loo_compare(loo_without_A_sq, loo_without_B_sq)
+```
+
+
+Create a contour plot of the posterior predictive mean of conversion as a function of concentration settings
+```{r fig.show="hold", out.width="50%"}
+# extract the posterior samples for further analysis
+# post_smp_reg <- as.data.frame(rstan::extract(reg_fit, permuted = TRUE))
+
+# Extract the summary of the fit
+fit_summary <- summary(reg_fit)$summary
+# Extract the means of beta[1] to beta[5]
+beta_means <- fit_summary[grep("beta", rownames(fit_summary)), "mean"]
+# Print the extracted means
+print(beta_means)
+
+# Extract them individually
+beta_1_mean <- fit_summary["beta[1]", "mean"]
+beta_2_mean <- fit_summary["beta[2]", "mean"]
+beta_3_mean <- fit_summary["beta[3]", "mean"]
+beta_4_mean <- fit_summary["beta[4]", "mean"]
+beta_5_mean <- fit_summary["beta[5]", "mean"]
+
+# rename the columns
+colnames(post_smp_reg)[1:5] <- colnames(X)
+
+# plot the posterior distribution of the parameters
+plot(post_smp_reg$A, type = "l")
+plot(post_smp_reg$B, type = "l")
+plot(post_smp_reg$A_sq, type = "l")
+plot(post_smp_reg$B_sq, type = "l")
+plot(post_smp_reg$A_B, type = "l")
+```
 
 Once we have the posterior distributions of the parameters, we can use them to generate the posterior predictive distribution of conversion for any given pair of concentrations.
 Here, I also created a contour plot of the posterior predictive mean of conversion as a function of concentration settings to visualize the relationship between the modulators and conversion.
 
 ```{r}
-# Extract samples from a fitted Stan model
-posterior_samples <- as.data.frame(rstan::extract(reg_fit, permuted = TRUE))
-
-# Extract the summary of the fit
-fit_summary <- summary(reg_fit)$summary
-# extract them individually
-rho_1_mean <- fit_summary["Rho[1]", "mean"]
-rho_2_mean <- fit_summary["Rho[2]", "mean"]
-rho_3_mean <- fit_summary["Rho[3]", "mean"]
-rho_4_mean <- fit_summary["Rho[4]", "mean"]
-rho_5_mean <- fit_summary["Rho[5]", "mean"]
-rho_6_mean <- fit_summary["Rho[6]", "mean"]
-
-# Define a grid of concentration sequences for the two modulators
-modulator_A_seq <- seq(0, 80, length.out = 100)
+# Define a grid of concentration settings
+modulator_A_seq <- seq(0, 75, length.out = 100)
 modulator_B_seq <- seq(0, 30, length.out = 100)
 
-# Create a grid of concentration pairs for the two modulators
+# standardize the data
+modulator_A_seq <- (modulator_A_seq - mean(modulator_A_seq)) / sd(modulator_A_seq)
+modulator_B_seq <- (modulator_B_seq - mean(modulator_B_seq)) / sd(modulator_B_seq)
+
 grid <- expand.grid(modulator_A = modulator_A_seq, modulator_B = modulator_B_seq)
 
-# Create the function for it
-mean_predictives <- function(modulator_A, modulator_B) {
-  # Compute the predictive mean using the model equation and the posterior samples
-  mean_predictive <- mean(rho_1_mean +
-                          rho_2_mean * modulator_A +
-                          rho_3_mean * modulator_B +
-                          rho_4_mean * modulator_A^2 +
-                          rho_5_mean * modulator_B^2 +
-                          rho_6_mean * (modulator_A * modulator_B)
-                          )
-  return(mean_predictive)
-  }
-
-reg_lik <- outer(modulator_A_seq, modulator_B_seq, mean_predictives)
-# # Create the function for it
-# mean_predictives <- function(row) {
-#   modulator_A <- row["modulator_A"]
-#   modulator_B <- row["modulator_B"]
-#   # Compute the predictive mean using the model equation and the posterior samples
-#   mean_predictive <- mean(rho_1_mean + 
-#                           rho_2_mean * modulator_A +
-#                           rho_3_mean * modulator_B +
-#                           rho_4_mean * modulator_A^2 +
-#                           rho_5_mean * modulator_B^2 +
-#                           rho_6_mean * (modulator_A * modulator_B)
-#                           )
-#   return(mean_predictive)
-#   }
-
 # Compute the posterior predictive mean of conversion for each pair of concentration settings
-predictive_means <- apply(grid, 1, mean_predictives)
+predictive_means <- apply(grid, 1, function(row) {
+  modulator_A <- row["modulator_A"]
+  modulator_B <- row["modulator_B"]
+
+  # Compute the predictive mean using the model equation and the posterior samples
+  mean_predictive <- mean(post_smp_reg$A * modulator_A +
+                          post_smp_reg$B * modulator_B +
+                          post_smp_reg$A_sq * modulator_A^2 +
+                          post_smp_reg$B_sq * modulator_B^2 +
+                          post_smp_reg$A_B * (modulator_A * modulator_B))
+  return(mean_predictive)
+})
 
 # Add the computed predictive means to the grid
 grid$predictive_mean <- predictive_means
 
-
-
+# Plot the contour
 ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean)) +
   geom_contour(aes(color = ..level..)) +
   scale_color_viridis_c() +
@@ -502,4 +555,37 @@ ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean)) +
        y = "Modulator B",
        color = "Predictive Mean") +
   theme_minimal()
+```
+
+
+```{r}
+
+# compile the model
+reg1_data <- list(N = nrow(X), p = ncol(X), x = X, y = y, pr_sd = 100)
+predictive_means_without_A_sq <- apply(grid, 1, function(row) {
+  modulator_A <- row["modulator_A"]
+  modulator_B <- row["modulator_B"]
+
+  # Compute the predictive mean using the model equation and the posterior samples
+  mean_predictive_without_A_sq <- mean(post_smp_reg$A * modulator_A +
+                          post_smp_reg$B * modulator_B +
+                          # post_smp_reg$A_sq * modulator_A^2 +
+                          post_smp_reg$B_sq * modulator_B^2 +
+                          post_smp_reg$A_B * (modulator_A * modulator_B))
+  return(mean_predictive_without_A_sq)
+})
+
+# Add the computed predictive means to the grid
+grid$predictive_mean <- predictive_means_without_A_sq
+
+# Plot the contour
+ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean)) +
+  geom_contour(aes(color = ..level..)) +
+  scale_color_viridis_c() +
+  labs(title = "Contour Plot of Posterior Predictive Mean of Conversion",
+       x = "Modulator A",
+       y = "Modulator B",
+       color = "Predictive Mean") +
+  theme_minimal()
+
 ```
