@@ -427,7 +427,7 @@ reg_fit <- rstan::sampling(
   object = reg_half_cauchy,
   data = reg1_data,
   iter = 10000,
-  warmup = 1000,
+  warmup = 2000,
   chains = 4
 )
 ```
@@ -459,8 +459,8 @@ reg_fit_without_A_sq <- rstan::sampling(
   object = reg_half_cauchy,
   data = reg1_data_without_A_sq,
   iter = 10000,
-  warmup = 1000,
-  chains = 4
+  warmup = 2000,
+  chains = 2
 )
 # Compute LOO-CV for the second model
 loo_without_A_sq <- loo(reg_fit_without_A_sq)
@@ -472,8 +472,8 @@ reg_fit_without_B_sq <- rstan::sampling(
   object = reg_half_cauchy,
   data = reg1_data_without_B_sq,
   iter = 10000,
-  warmup = 1000,
-  chains = 4
+  warmup = 2000,
+  chains = 2
 )
 # Compute LOO-CV for the thrid model
 loo_without_B_sq <- loo(reg_fit_without_B_sq)
@@ -516,7 +516,7 @@ plot(post_smp_reg$A_B, type = "l")
 ```
 
 Once we have the posterior distributions of the parameters, we can use them to generate the posterior predictive distribution of conversion for any given pair of concentrations.
-Here, I also created a contour plot of the posterior predictive mean of conversion as a function of concentration settings to visualize the relationship between the modulators and conversion.
+Here, I created a contour plot of the posterior predictive mean of conversion as a function of concentration settings to visualize the relationship between the modulators and conversion.
 
 ```{r}
 # Define a grid of concentration settings
@@ -524,10 +524,10 @@ modulator_A_seq <- seq(0, 75, length.out = 100)
 modulator_B_seq <- seq(0, 30, length.out = 100)
 
 # standardize the data
-modulator_A_seq <- (modulator_A_seq - mean(modulator_A_seq)) / sd(modulator_A_seq)
-modulator_B_seq <- (modulator_B_seq - mean(modulator_B_seq)) / sd(modulator_B_seq)
+modulator_A_seq_standardized <- (modulator_A_seq - mean(modulator_A_seq)) / sd(modulator_A_seq)
+modulator_B_seq_standardized <- (modulator_B_seq - mean(modulator_B_seq)) / sd(modulator_B_seq)
 
-grid <- expand.grid(modulator_A = modulator_A_seq, modulator_B = modulator_B_seq)
+grid <- expand.grid(modulator_A = modulator_A_seq_standardized, modulator_B = modulator_B_seq_standardized)
 
 # Compute the posterior predictive mean of conversion for each pair of concentration settings
 predictive_means <- apply(grid, 1, function(row) {
@@ -557,51 +557,80 @@ ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean)) +
   theme_minimal()
 ```
 
+Based on the countour plot, I decided to mostly include the data points which are located within the light green area where the conversion is high.\
+The range of Modulator A is [34.20324, 46.29136] and the range of Modulator B is [9.725183, 22.033089].\
+I will use these ranges to create the second experiment design.
 
-Try without `A_sq`
+```{r}
+# Set the range for Modulator A
+range_A_standardized <- c(-0.15, 0.4)
+# Set the range for Modulator B
+range_B_standardized <- c(-0.6, 0.4)
+
+# De-standardize the range for Modulator A
+range_A_original <- (range_A_standardized * sd(modulator_A_seq)) + mean(modulator_A_seq)
+# De-standardize the range for Modulator B
+range_B_original <- (range_B_standardized * sd(modulator_B_seq)) + mean(modulator_B_seq)
+
+# randomly select the values of the modulators within the range
+set.seed(46)
+rangeA <- runif(48, min = 34.20324, max = 46.29136)
+rangeB <- runif(48, min = 9.725183, max = 22.033089)
+
+# Create a DataFrame
+design2 <- data.frame(A = rangeA, B = rangeB)
+# write a table and save it to csv
+write.table(design2, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/design2.csv", sep = ",", col.names = F, row.names = F)
+```
+
+
+
+
+
+Try without `A_sq` and `A_B`
 ```{r}
 # create the data for stan simulation
-X <- design1_result[, c("A", "B", "B_sq", "A_B")]
+X <- design1_result[, c("A", "B", "B_sq")]
 X[, "Offset"] <- 1
 y <- design1_result$y
 
 # compile the model
 reg2_data <- list(N = nrow(X), p = ncol(X), x = X, y = y, pr_sd = 100)
-reg_fit_without_A_sq <- rstan::sampling(
+reg_fit2 <- rstan::sampling(
   object = reg_half_cauchy,
   data = reg2_data,
   iter = 10000,
-  warmup = 1000,
-  chains = 4
+  warmup = 2000,
+  chains = 2
 )
 # save the model
-saveRDS(reg_fit_without_A_sq, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit_without_A_sq.rds")
+saveRDS(reg_fit2, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit2.rds")
 # read the model
-reg_fit_without_A_sq <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit_without_A_sq.rds")
+reg_fit2 <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit2.rds")
 # turn the posterior samples into a data frame
-post_smp_reg <- as.data.frame(reg_fit_without_A_sq)
+post_smp_reg <- as.data.frame(reg_fit2)
 # rename the columns
-colnames(post_smp_reg)[1:5] <- colnames(X)
-mcmc_areas(post_smp_reg[, 1:5], pars = colnames(X)[1:5], prob = 0.8)
+colnames(post_smp_reg)[1:4] <- colnames(X)
+mcmc_areas(post_smp_reg[, 1:4], pars = colnames(X)[1:4], prob = 0.8)
 
 # compile the model
-predictive_means_without_A_sq <- apply(grid, 1, function(row) {
+predictive_means2 <- apply(grid, 1, function(row) {
   modulator_A <- row["modulator_A"]
   modulator_B <- row["modulator_B"]
 
   # Compute the predictive mean using the model equation and the posterior samples
   mean_predictive <- mean(post_smp_reg$A * modulator_A +
                           post_smp_reg$B * modulator_B +
-                          post_smp_reg$B_sq * modulator_B^2 +
-                          post_smp_reg$A_B * (modulator_A * modulator_B))
+                          post_smp_reg$B_sq * modulator_B^2
+                          )
   return(mean_predictive)
 })
 
 # Add the computed predictive means to the grid
-grid$predictive_mean <- predictive_means_without_A_sq
+grid$predictive_mean2 <- predictive_means2
 
 # Plot the contour
-ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean)) +
+ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean2)) +
   geom_contour(aes(color = ..level..)) +
   scale_color_viridis_c() +
   labs(title = "Contour Plot of Posterior Predictive Mean of Conversion",
