@@ -179,3 +179,66 @@ stan_dens(nfit, pars = c("beta", "sigma"), separate_chains = TRUE)
 # auto correlation plot
 stan_ac(nfit, pars = c("beta", "sigma"), separate_chains = TRUE)
 ```
+
+
+
+
+
+# Applied problem
+
+## Second design
+### Try to make the polynomial regression without A_sq
+
+Try without `A_sq`
+```{r}
+# create the data for stan simulation
+X <- design1_result[, c("A", "B", "B_sq", "A_B")]
+X[, "Offset"] <- 1
+y <- design1_result$y
+
+# compile the model
+reg2_data <- list(N = nrow(X), p = ncol(X), x = X, y = y, pr_sd = 100)
+reg_fit_without_A_sq <- rstan::sampling(
+  object = reg_half_cauchy,
+  data = reg2_data,
+  iter = 10000,
+  warmup = 2000,
+  chains = 2
+)
+# save the model
+saveRDS(reg_fit_without_A_sq, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit_without_A_sq.rds")
+# read the model
+reg_fit_without_A_sq <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit_without_A_sq.rds")
+# turn the posterior samples into a data frame
+post_smp_reg <- as.data.frame(reg_fit_without_A_sq)
+# rename the columns
+colnames(post_smp_reg)[1:5] <- colnames(X)
+mcmc_areas(post_smp_reg[, 1:5], pars = colnames(X)[1:5], prob = 0.8)
+
+# compile the model
+predictive_means_without_A_sq <- apply(grid, 1, function(row) {
+  modulator_A <- row["modulator_A"]
+  modulator_B <- row["modulator_B"]
+
+  # Compute the predictive mean using the model equation and the posterior samples
+  mean_predictive <- mean(post_smp_reg$A * modulator_A +
+                          post_smp_reg$B * modulator_B +
+                          post_smp_reg$B_sq * modulator_B^2 +
+                          post_smp_reg$A_B * (modulator_A * modulator_B))
+  return(mean_predictive)
+})
+
+# Add the computed predictive means to the grid
+grid$predictive_mean <- predictive_means_without_A_sq
+
+# Plot the contour
+ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean)) +
+  geom_contour(aes(color = ..level..)) +
+  scale_color_viridis_c() +
+  labs(title = "Contour Plot of Posterior Predictive Mean of Conversion",
+       x = "Modulator A",
+       y = "Modulator B",
+       color = "Predictive Mean") +
+  theme_minimal()
+
+```
