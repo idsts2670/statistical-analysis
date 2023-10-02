@@ -57,5 +57,3 @@ rect(
     xright=mu1_interval[2], ytop=mu2_interval[2],
     col=rgb(0,0,0.4,0.2), border="white"
     )
-
-
