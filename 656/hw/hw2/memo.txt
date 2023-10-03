@@ -242,3 +242,38 @@ ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean)) +
   theme_minimal()
 
 ```
+
+
+
+
+# Fit the second model (without x1_sq predictor)
+X_no_x1_sq <- X[, !colnames(X) %in% "x1_sq"]
+poissonreg_no_x1_sq_data <- list(N = nrow(X_no_x1_sq), p = ncol(X_no_x1_sq), x = X_no_x1_sq, y = y, pr_sd = 100)
+poissonreg_no_x1_sq <- rstan::sampling(
+  object = poissonreg_normal,
+  data = poissonreg_no_x1_sq_data,
+  iter = 10000,
+  warmup = 2000,
+  chains = 2
+)
+
+# Compute LOO-CV for the second model
+loo_no_x1_sq <- loo(poissonreg_no_x1_sq)
+
+# Fit the thrid model (without x1_x2 predictor)
+X_no_x1_x2 <- X[, !colnames(X) %in% "x1_x2"]
+poissonreg_no_x1_x2_data <- list(N = nrow(X_no_x1_x2), p = ncol(X_no_x1_x2), x = X_no_x1_x2, y = y, pr_sd = 100)
+poissonreg_no_x1_x2 <- rstan::sampling(
+  object = poissonreg_normal,
+  data = poissonreg_no_x1_x2_data,
+  iter = 10000,
+  warmup = 2000,
+  chains = 2
+)
+# Compute LOO-CV for the thrid model
+loo_no_x1_x2 <- loo(poissonreg_no_x1_x2)
+
+# Compare the models
+loo::loo_compare(loo_all, loo_no_x1_sq)
+loo::loo_compare(loo_all, loo_no_x1_x2)
+loo::loo_compare(loo_no_x1_sq, loo_no_x1_x2)

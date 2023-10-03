@@ -13,8 +13,7 @@ knitr::opts_chunk$set(
 
 ```{r}
 library("ggplot2")
-library("dplyr")
-library("tidyr")
+library("tidyverse")
 library("MASS")
 library("fs")
 library("moments")
@@ -91,7 +90,7 @@ paste0("sd of x1:", sd(df$x1), " sd of x2: ", sd(df$x2))
 ```
 
 Histogram of data
-```{r fig.show="hold", out.width="50%"}
+```{r fig.show="hold", out.width="25%"}
 plot(df)
 hist(df$x1)
 hist(df$x2)
@@ -121,51 +120,38 @@ poissonreg_normal_code = "
 
 // Data are things you observe/condition on
 data {
-  // number of data items
-  int<lower=1> N;
-  // Number of beta parameters (predictors)
-  int<lower=1> p;
-  // std dev of the prior
-  real<lower=0> pr_sd;
-  // matrix of predictors
-  matrix[N, p] x;
-
-  // offset
-  // real offset[N];
-
-  // count outcome (output vector)
-  int<lower=0> y[N];
+  int<lower=1> N; // number of data items
+  int<lower=1> p; // Number of beta parameters (predictors)
+  real<lower=0> pr_sd; // std dev of the prior
+  matrix[N, p] x; // matrix of predictors
+  // real offset[N]; // offset
+  int<lower=0> y[N]; // count outcome (output vector)
 }
 
 parameters {
-  // Parameters to estimate
-  vector[p] beta;
+  vector[p] beta; // Parameters to estimate
 }
 
 // useful to avoid repeating calculations
 // note that stan will return values of these variables for each MCMC sample
 transformed parameters {
-  // exp of linear predictor
-  vector[N] mu = exp(x * beta);
+  vector[N] mu = exp(x * beta); // exp of linear predictor
 }
 
 // The actual Bayesian model goes here
 // I set normal dist as a prior for beta
 model {
-  // priors
-  // Note: beta is p-dim
-  beta ~ normal(0, pr_sd);  
-  
-  // likelihood
-  y ~ poisson(mu);
+  beta ~ normal(0, pr_sd); // priors // Note: beta is p-dim
+  y ~ poisson(mu); // likelihood
 }
 
 // Generate quantities of interest (e.g. posterior predictions)
 generated quantities {
-  
+  real log_lik[N]; // log likelihood for each observation
   int<lower=0> y_rep[N];
-
   for (i in 1:N) {
+    log_lik[i] = poisson_lpmf(y[i] | mu[i]); // likelihood
+    // generate a new predicted data point y_rep[i] that is consistent with the current sample of the parameters
     y_rep[i] = poisson_rng(mu[i]);
   }
 }
@@ -182,7 +168,7 @@ y <- df$y
 ```
 
 ```{r}
-# compile the model
+# fit the model to the data and obtain posterior samples
 poissonreg_data <- list(N = nrow(X), p = ncol(X), pr_sd = 100, x = X, y = y)
 nfit <- rstan::sampling(
   object = poissonreg_normal,
@@ -195,7 +181,7 @@ nfit <- rstan::sampling(
 
 ```{r}
 # save the model
-# saveRDS(nfit, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit.rds")
+saveRDS(nfit, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit.rds")
 # read the model (-> In this way, no need to run the model again)
 nfit <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit.rds")
 ```
@@ -217,32 +203,24 @@ colnames(post_smp) <- colnames(X)
 
 ```{r fig.show="hold", out.width="50%"}
 plot(post_smp$x1, type = "l")
-# trace plot
-# traceplot(nfit, pars = c("mu"), inc_warmup = TRUE)
 ```
 
-```{r fig.show="hold", out.width="50%"}
-y_rep <- extract(nfit, "y_rep")$y_rep
-sg <- post_smp$mu
-
-ppd_intervals(y_rep, x = y) +
-  geom_abline(intercept = 0, slope = 1, color = "grey") +
-  ggplot2::labs(y = "Predicted Ys", x = "Observed Ys")
-
-ppd_intervals(t(t(y_rep) - y), x = y) +
-  geom_abline(intercept = 0, slope = 0) +
-  ggplot2::labs(y = "Errors in predicted Y's", x = "Observed Y's")
+I have checked the histogram of the posterior distribution of the parameters, and it seems that `x1_sq` and `x1_x2` are not significant in the model.\
+Therefore, we try to compare the model with and without `x1_sq` and `x1_x2` to see which model is better.
+```{r}
+mcmc_areas(post_smp, pars = colnames(X), prob = 0.8)
 ```
 
 **model without `x1_sq` and `x1_x2`**
+```{r}
+# create the data for stan simulation
+X2 <- df[, c("x1", "x2", "x2_sq", "offset")]
+y2 <- df$y
+```
 
 ```{r}
-X2 <- df[, c("x1", "x2", "x2_sq", "offset")]
-y <- df$y
-```
-```{r}
-# compile the model
-poissonreg_data2 <- list(N = nrow(X2), p = ncol(X2), pr_sd = 100, x = X2, y = y)
+# fit the model to the data and obtain posterior samples
+poissonreg_data2 <- list(N = nrow(X2), p = ncol(X2), pr_sd = 100, x = X2, y = y2)
 nfit2 <- rstan::sampling(
   object = poissonreg_normal,
   data = poissonreg_data2,
@@ -265,15 +243,127 @@ post_smp2 <- as.data.frame(nfit2)[, c(1, 2, 3, 4)]
 colnames(post_smp2) <- colnames(X2)
 ```
 
+Apparently, without `x1_sq` and `x1_x2`, the posterior distribution of the parameters become more significant.\
 ```{r fig.show="hold", out.width="50%"}
 # plot comparison of the two models
 mcmc_areas(post_smp, pars = colnames(X), prob = 0.8)
 mcmc_areas(post_smp2, pars = colnames(X2), prob = 0.8)
 ```
 
+We can check interval estimates for each predicted observations in both models.
+```{r fig.show="hold", out.width="50%"}
+# plot the posterior distribution of the parameters of the base model
+y_rep <- extract(nfit, "y_rep")$y_rep
+
+## interval estimates for each predicted observations (columns) in y_pred
+ppd_intervals(y_rep, x = y) +
+  geom_abline(intercept = 0, slope = 1, color = "grey") +
+  ggplot2::labs(y = "Predicted Ys", x = "Observed Ys")
+
+
+# plot the posterior distribution of the parameters of the model without x1_sq and x1_x2
+y_rep2 <- extract(nfit2, "y_rep")$y_rep
+
+## interval estimates for each predicted observations (columns) in y_pred2
+ppd_intervals(y_rep2, x = y2) +
+  geom_abline(intercept = 0, slope = 1, color = "grey") +
+  ggplot2::labs(y = "Predicted Ys without x1_sq and x1_x2", x = "Observed Ys")
+
+```
+
+We can check an error in the predicted Y's for both models as well.
+```{r fig.show="hold", out.width="50%"}
+
+ppd_intervals(t(t(y_rep) - y), x = y) +
+  geom_abline(intercept = 0, slope = 0) +
+  ggplot2::labs(y = "Errors in predicted Y's", x = "Observed Y's")
+
+ppd_intervals(t(t(y_rep2) - y2), x = y2) +
+  geom_abline(intercept = 0, slope = 0) +
+  ggplot2::labs(y = "Errors in predicted Y's  without x1_sq and x1_x2", x = "Observed Y's")
+```
+
 3. **Perform posterior predictive checks for both models, being sure to explain what you are doing. Which model do you think fits the data better?**
 
+We have already been through a posterior predictive checking. The idea behind posterior predictive checking is simple: if a model is a good fit then we should be able to use it to generate data that looks a lot like the data we observed. \
+To generate the data used for posterior predictive checks, we simulate from the posterior predictive distribution. \
+This is the distribution of the outcome variable implied by a model after using the observed data `y` (a vector of N outcome values) to update our beliefs about unknown model parameters \(\theta\). \
+The posterior predictive distribution for observation \(\y^\sim\) can be written as
 
+$$
+p(y^\sim | y) = \int p(y^\sim | \theta) p(\theta | y) d\theta.
+$$
+
+We have checked some of the posterior predictive distribution of the parameters of the models above.\
+In addition to the plots above, we can also check and compare the posterior predictive distributions of the conversion for each model by plotting some histograms and high density estimates.
+* Density plots ()
+```{r fig.show="hold", out.width="50%"}
+# plot the posterior predictive distribution of the parameters of the base model
+posterior_samples <- rstan::extract(nfit, permuted = TRUE)
+y_rep_samples <- posterior_samples$y_rep
+# Each row corresponds to a posterior sample (= 16000).
+# Each column corresponds to a data point (i.e., each of the N data points I have) (= 100).
+# dim(y_rep_samples)
+
+color_scheme_set("brightblue")
+ppc_dens_overlay(y, y_rep_samples[1:50, ]) +
+  labs(title = "Observed outcomes `y` and kernel density estimate `y_rep`", subtitle = "Created based on the original model") +
+  theme(
+    plot.title = element_text(
+      size = 20,
+      face = "bold",
+      color = "darkblue",
+      hjust = 0.5),
+    plot.subtitle = element_text(size = 15, hjust = 0.5)
+    )
+
+# plot the posterior predictive distribution of the parameters of the base model
+posterior_samples2 <- rstan::extract(nfit2, permuted = TRUE)
+y_rep_samples2 <- posterior_samples2$y_rep
+
+color_scheme_set("green")
+ppc_dens_overlay(y2, y_rep_samples2[1:50, ]) +
+  labs(title = "Observed outcomes `y` and kernel density estimate `y_rep`", subtitle = "Created based on the reduced model") +
+  theme(
+    plot.title = element_text(
+      size = 20,
+      face = "bold",
+      color = "darkgreen",
+      hjust = 0.5),
+    plot.subtitle = element_text(size = 15, hjust = 0.5)
+  )
+
+```
+
+
+Plots above gave us a hint but they are not clear. Hence, we can also compare the models using Leave-One-Out Cross-Validation method (LOO-CV).\
+Here, the key output metrics are:\
+* elpd_diff: The difference in expected log pointwise predictive density. Positive values indicate that the model on the row is expected to make better predictions (on average) than the model/column used for comparison.
+* se_diff: The standard error of the difference.
+
+Reduced model has a better elpd_diff (= + 3.0), meaning the model is expected to predict new data better than the original model based on LOO-CV as the metric of comparison.
+```{r}
+# Compute LOO-CV for the first model
+loo_all <- loo(nfit)
+
+# exclude x1_sq and x1_x2 from the model
+X2 <- X[, !colnames(X) %in% c("x1_sq", "x1_x2")]
+poissonreg2_data <- list(N = nrow(X2), p = ncol(X2), x = X2, y = y2, pr_sd = 100)
+
+poissonreg2 <- rstan::sampling(
+  object = poissonreg_normal,
+  data = poissonreg2_data,
+  iter = 10000,
+  warmup = 2000,
+  chains = 2
+)
+
+# Compute LOO-CV for the second model
+loo2 <- loo(poissonreg2)
+
+# Compare the models
+loo::loo_compare(loo_all, loo2)
+```
 
 
 # Applied problem
