@@ -1,14 +1,18 @@
 ---
 title: "STAT 656 HW 2"
 author: "Satoshi Ido (ID: 34788706)"
-date: 1 October 2023
+date: "2022-10-03"
 output: pdf_document
+header-includes:
+  - "\\usepackage{listings}"
+  - "\\lstset{breaklines=true,breakatwhitespace=true}"
 ---
 ```{r setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(
-    echo = TRUE,
-    warning = FALSE,
-    message = FALSE)
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE
+)
 ```
 
 ```{r}
@@ -22,20 +26,21 @@ library("bayesplot")
 library("StanHeaders")
 ```
 
-set options to speed up the calculations
-```{r}
-# to avoid recompilation of unchanged Stan programs, we recommend calling
+
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# set options to speed up the calculations
+# To avoid recompilation of unchanged Stan programs, we recommend calling
 rstan_options(auto_write = TRUE)
-# for execution on a local, multicore CPU with excess RAM we recommend calling
+# For execution on a local, multicore CPU with excess RAM we recommend calling
 options(mc.cores = parallel::detectCores())
-# set the size of the plots
+# Set the size of the plots
 options(repr.plot.width = 12, repr.plot.height = 6)
 
-# options(bayesplot::theme_default())
+# Options(bayesplot::theme_default())
 bayesplot_theme_set(theme_default(base_size = 24, base_family = "sans"))
 ```
 
-```{r}
+```{r warning=FALSE, message=FALSE, include=FALSE}
 # Create the input_dir (input directory)
 current_note_path <- getwd()
 INPUT_DIR <- file.path(current_note_path, "656/hw/hw2/data")
@@ -61,35 +66,44 @@ read_csv <- function(name, ...) {
 }
 ```
 
+<br>
+
 # Synthetic data
+<br>
+
 The file `hw2 synthetic.csv` is a dataset of count-valued measurements \(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \{0, 1, \ldots\}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\). We model \(y_i\) as
 \[y_i | \beta \sim \text{Poisson}(e^{f(x_i,\beta)})\]
-Here, the exponential is to ensure the Poisson rate is always positive, and the function \(f(x_i,\beta) = \beta_0 + \beta_1x_{i,1} + \beta_2x_{i,2} + \beta_3x_{i,1}^2 + \beta_4x_{i,2}^2 + \beta_5x_{i,1}x_{i,2}\).
+Here, the exponential is to ensure the Poisson rate is always positive, and the function \(f(x_i,\beta) = \beta_0 + \beta_1x_{i,1} + \beta_2x_{i,2} + \beta_3x_{i,1}^2 + \beta_4x_{i,2}^2 + \beta_5x_{i,1}x_{i,2}\). <br><br>
 
 ```{r}
 df <- read.csv("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/data/hw2_synthetic.csv")
 head(df)
 ```
 
-Data Creation for Stan coding
-```{r}
-# create the data for poisson regression model
+```{r warning=FALSE, message=FALSE}
+# Create the data for stan simulation of a poisson regression model
 df$x1_sq <- df$x1^2
 df$x2_sq <- df$x2^2
 df$x1_x2 <- df$x1 * df$x2
 df$offset <- 1
 ```
 
-1. **With the provided data, perform a Bayesian analysis on the parameters of the model above to decide which terms in the expression for f(x) you think are important. State clearly what your prior over beta is, and how you arrived at your conclusion, including any useful figures (especially of the posterior distribution). You can use Stan.**
+<br>
 
-Summary of the data
+## 1. With the provided data, perform a Bayesian analysis on the parameters of the model above to decide which terms in the expression for f(x) you think are important. State clearly what your prior over beta is, and how you arrived at your conclusion, including any useful figures (especially of the posterior distribution). You can use Stan.
+<br>
+
+Summary of the data <br>
+
 ```{r}
 summary(df)
 # sd of x1 and x2
 paste0("sd of x1:", sd(df$x1), " sd of x2: ", sd(df$x2))
 ```
 
-Histogram of data
+<br>
+Histogram of data <br>
+
 ```{r fig.show="hold", out.width="25%"}
 plot(df)
 hist(df$x1)
@@ -97,22 +111,22 @@ hist(df$x2)
 hist(df$y)
 ```
 
+<br>
+
 I have used Stan to perform the Bayesian analysis.\
-For prior distribution of beta, I have little prior knowledge of the data and model.\
-Also, as we can see by plotting the `x1` and `x2` histogram, they seem to follow normal distribution. 
+For prior distribution of beta, I have little prior knowledge of the data and model. Also, as we can see by plotting the `x1` and `x2` histogram, they seem to follow normal distribution. 
 Therefore, I set the prior as normal distribution with a large standard deviation, N(0, 100).\
 
 We assume
-\(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \{0, 1, \ldots\}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\). \
-We model \(y_i\) as
-\[y_i | \beta \sim \text{Poisson}(e^{f(x_i,\beta)})\
-] where the exponential is to ensure the Poisson rate is always positive
+\(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \{0, 1, \ldots\}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\). 
+We model \(y_i\) as \(y_i | \beta \sim \text{Poisson}(e^{f(x_i,\beta)})\) where the exponential is to ensure the Poisson rate is always positive
 
 The Regression model which I used for the analysis is as below.\
 Regression model: 
-[
+\begin{equation}
   f(x_i, \beta) = \beta_0 + \beta_1 x_{i, 1} + \beta_2 x_{i, 2} + \beta_3 x_{i, 1}^2 + \beta_4 x_{i, 2}^2 + \beta_5 x_{i, 1} x_{i, 2}
-]
+\end{equation} <br>
+
 ```{r}
 
 poissonreg_normal_code = "
@@ -157,18 +171,18 @@ generated quantities {
 }
 "
 
-# build the model before sampling
+# Build the model before sampling
 poissonreg_normal <- stan_model(model_code = poissonreg_normal_code)
 ```
 
 ```{r}
-# create the data for stan simulation
+# Create the data for stan simulation
 X <- df[, c("x1", "x2", "x1_sq", "x2_sq", "x1_x2", "offset")]
 y <- df$y
 ```
 
 ```{r}
-# fit the model to the data and obtain posterior samples
+# Fit the model to the data and obtain posterior samples
 poissonreg_data <- list(N = nrow(X), p = ncol(X), pr_sd = 100, x = X, y = y)
 nfit <- rstan::sampling(
   object = poissonreg_normal,
@@ -180,23 +194,24 @@ nfit <- rstan::sampling(
 ```
 
 ```{r}
-# save the model
+# Save the model
 saveRDS(nfit, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit.rds")
-# read the model (-> In this way, no need to run the model again)
+# Read the model (-> In this way, no need to run the model again)
 nfit <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit.rds")
 ```
 
+<br>
 
-2. **Having decided which terms in f are important, keep only those and discard the rest, resulting in a possibly simpler model. Now perform a Bayesian analysis over the parameters of this model. Note that you are using the data twice, once to select the model and next to fit the it, but we will not worry about that. Compare the posteriors for both models.**
+## 2. Having decided which terms in f are important, keep only those and discard the rest, resulting in a possibly simpler model. Now perform a Bayesian analysis over the parameters of this model.
+<br>
 
 The posterior distribution of the parameters are as below.\
 After considering the outputs of the model and fact that the parameter `x1_sq` and `x1_x2` are not significant in the model, I decided to remove these parameters from the model and run the model again.
-As the result, \(x_1\) and \(x_2\) still seem to be significant in the model, while \(x_2 ^ 2\) seems not significant.\
-There is a possibility that the \(x_2\) and \(x_2 ^ 2\) are correlated, and have a multicollinearity problem.\
-Yet, it does not seem to be serious problem in this case, since the \(x_2\) and \(x_2 ^ 2\) are not highly correlated. Hence, I decided to keep the \(x_2\) in the model.
+As the result, \(x_1\) and \(x_2\) still seem to be significant in the model, while \(x_2 ^ 2\) seems not significant. There is a possibility that the \(x_2\) and \(x_2 ^ 2\) are correlated, and have a multicollinearity problem. 
+Yet, it does not seem to be serious problem in this case, since the \(x_2\) and \(x_2 ^ 2\) are not highly correlated. Hence, I decided to keep the \(x_2\) in the model. <br><br>
 
 ```{r}
-# extract the posterior samples for further analysis
+# Extract the posterior samples for further analysis
 post_smp <- as.data.frame(nfit)[, c(1, 2, 3, 4, 5, 6)]
 colnames(post_smp) <- colnames(X)
 ```
@@ -204,22 +219,25 @@ colnames(post_smp) <- colnames(X)
 ```{r fig.show="hold", out.width="50%"}
 plot(post_smp$x1, type = "l")
 ```
+<br>
 
-I have checked the histogram of the posterior distribution of the parameters, and it seems that `x1_sq` and `x1_x2` are not significant in the model.\
-Therefore, we try to compare the model with and without `x1_sq` and `x1_x2` to see which model is better.
+I have checked the histogram of the posterior distribution of the parameters, and it seems that `x1_sq` and `x1_x2` are not significant in the model. Therefore, we try to compare the model with and without `x1_sq` and `x1_x2` to see which model is better. <br>
+
 ```{r}
 mcmc_areas(post_smp, pars = colnames(X), prob = 0.8)
 ```
+<br>
 
-**model without `x1_sq` and `x1_x2`**
+**model without `x1_sq` and `x1_x2`** <br>
+
 ```{r}
-# create the data for stan simulation
+# Create the data for stan simulation
 X2 <- df[, c("x1", "x2", "x2_sq", "offset")]
 y2 <- df$y
 ```
 
 ```{r}
-# fit the model to the data and obtain posterior samples
+# Fit the model to the data and obtain posterior samples
 poissonreg_data2 <- list(N = nrow(X2), p = ncol(X2), pr_sd = 100, x = X2, y = y2)
 nfit2 <- rstan::sampling(
   object = poissonreg_normal,
@@ -231,64 +249,81 @@ nfit2 <- rstan::sampling(
 ```
 
 ```{r}
-# save the model
+# Save the model
 saveRDS(nfit2, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit2.rds")
-# read the model (-> In this way, no need to run the model again)
+# Read the model (-> In this way, no need to run the model again)
 nfit2 <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit2.rds")
 ```
 
-extract the posterior samples for further analysis
 ```{r}
+# Extract the posterior samples for further analysis
 post_smp2 <- as.data.frame(nfit2)[, c(1, 2, 3, 4)]
 colnames(post_smp2) <- colnames(X2)
 ```
 
-Apparently, without `x1_sq` and `x1_x2`, the posterior distribution of the parameters become more significant.\
+<br>
+
+Apparently, without `x1_sq` and `x1_x2`, the posterior distribution of the parameters look more significant. <br>
+
 ```{r fig.show="hold", out.width="50%"}
-# plot comparison of the two models
+# Plot comparison of the two models
 mcmc_areas(post_smp, pars = colnames(X), prob = 0.8)
 mcmc_areas(post_smp2, pars = colnames(X2), prob = 0.8)
 ```
 
-We can check interval estimates for each predicted observations in both models.
+<br>
+We can check interval estimates for each predicted observations in both models. <br><br>
+
 ```{r fig.show="hold", out.width="50%"}
-# plot the posterior distribution of the parameters of the base model
+# Plot the posterior distribution of the parameters of the base model
 y_rep <- extract(nfit, "y_rep")$y_rep
 
-## interval estimates for each predicted observations (columns) in y_pred
+## Interval estimates for each predicted observations (columns) in y_pred
 ppd_intervals(y_rep, x = y) +
   geom_abline(intercept = 0, slope = 1, color = "grey") +
-  ggplot2::labs(y = "Predicted Ys", x = "Observed Ys")
+  ggplot2::labs(y = "Predicted Ys", x = "Observed Ys") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
 
-
-# plot the posterior distribution of the parameters of the model without x1_sq and x1_x2
+# Plot the posterior distribution of the parameters of the model without x1_sq and x1_x2
 y_rep2 <- extract(nfit2, "y_rep")$y_rep
 
-## interval estimates for each predicted observations (columns) in y_pred2
+## Interval estimates for each predicted observations (columns) in y_pred2
 ppd_intervals(y_rep2, x = y2) +
   geom_abline(intercept = 0, slope = 1, color = "grey") +
-  ggplot2::labs(y = "Predicted Ys without x1_sq and x1_x2", x = "Observed Ys")
+  ggplot2::labs(y = "Predicted Ys without x1_sq and x1_x2", x = "Observed Ys") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
 
 ```
 
-We can check an error in the predicted Y's for both models as well.
+<br>
+We can check an error in the predicted Y's for both models as well. <br><br>
+
 ```{r fig.show="hold", out.width="50%"}
 
 ppd_intervals(t(t(y_rep) - y), x = y) +
   geom_abline(intercept = 0, slope = 0) +
-  ggplot2::labs(y = "Errors in predicted Y's", x = "Observed Y's")
+  ggplot2::labs(y = "Errors in predicted Y's", x = "Observed Y's") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
 
 ppd_intervals(t(t(y_rep2) - y2), x = y2) +
   geom_abline(intercept = 0, slope = 0) +
-  ggplot2::labs(y = "Errors in predicted Y's  without x1_sq and x1_x2", x = "Observed Y's")
+  ggplot2::labs(y = "Errors in predicted Y's  without x1_sq and x1_x2", x = "Observed Y's") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
 ```
 
-3. **Perform posterior predictive checks for both models, being sure to explain what you are doing. Which model do you think fits the data better?**
 
+The second model looks better because the variance of predictions is smaller. <br><br>
+
+## 3. Perform posterior predictive checks for both models, being sure to explain what you are doing. Which model do you think fits the data better?
+<br>
 We have already been through a posterior predictive checking. The idea behind posterior predictive checking is simple: if a model is a good fit then we should be able to use it to generate data that looks a lot like the data we observed. \
 To generate the data used for posterior predictive checks, we simulate from the posterior predictive distribution. \
 This is the distribution of the outcome variable implied by a model after using the observed data `y` (a vector of N outcome values) to update our beliefs about unknown model parameters \(\theta\). \
-The posterior predictive distribution for observation \(\y^\sim\) can be written as
+The posterior predictive distribution for observation \(y^\sim\) can be written as
 
 $$
 p(y^\sim | y) = \int p(y^\sim | \theta) p(\theta | y) d\theta.
@@ -296,9 +331,9 @@ $$
 
 We have checked some of the posterior predictive distribution of the parameters of the models above.\
 In addition to the plots above, we can also check and compare the posterior predictive distributions of the conversion for each model by plotting some histograms and high density estimates.
-* Density plots ()
+
 ```{r fig.show="hold", out.width="50%"}
-# plot the posterior predictive distribution of the parameters of the base model
+# Plot the posterior predictive distribution of the parameters of the base model
 posterior_samples <- rstan::extract(nfit, permuted = TRUE)
 y_rep_samples <- posterior_samples$y_rep
 # Each row corresponds to a posterior sample (= 16000).
@@ -310,14 +345,14 @@ ppc_dens_overlay(y, y_rep_samples[1:50, ]) +
   labs(title = "Observed outcomes `y` and kernel density estimate `y_rep`", subtitle = "Created based on the original model") +
   theme(
     plot.title = element_text(
-      size = 20,
+      size = 13,
       face = "bold",
       color = "darkblue",
       hjust = 0.5),
-    plot.subtitle = element_text(size = 15, hjust = 0.5)
+    plot.subtitle = element_text(size = 11, hjust = 0.5)
     )
 
-# plot the posterior predictive distribution of the parameters of the base model
+# Plot the posterior predictive distribution of the parameters of the base model
 posterior_samples2 <- rstan::extract(nfit2, permuted = TRUE)
 y_rep_samples2 <- posterior_samples2$y_rep
 
@@ -326,27 +361,29 @@ ppc_dens_overlay(y2, y_rep_samples2[1:50, ]) +
   labs(title = "Observed outcomes `y` and kernel density estimate `y_rep`", subtitle = "Created based on the reduced model") +
   theme(
     plot.title = element_text(
-      size = 20,
+      size = 13,
       face = "bold",
       color = "darkgreen",
       hjust = 0.5),
-    plot.subtitle = element_text(size = 15, hjust = 0.5)
+    plot.subtitle = element_text(size = 11, hjust = 0.5)
   )
 
 ```
 
 
 Plots above gave us a hint but they are not clear. Hence, we can also compare the models using Leave-One-Out Cross-Validation method (LOO-CV).\
-Here, the key output metrics are:\
-* elpd_diff: The difference in expected log pointwise predictive density. Positive values indicate that the model on the row is expected to make better predictions (on average) than the model/column used for comparison.
+Here, the key output metrics are: <br><br>
+
+* elpd_diff: The difference in expected log pointwise predictive density. Positive values indicate that the model on the row is expected to make better predictions (on average) than the model/column used for comparison.\
 * se_diff: The standard error of the difference.
 
-Reduced model has a better elpd_diff (= + 3.0), meaning the model is expected to predict new data better than the original model based on LOO-CV as the metric of comparison.
+Reduced model has a better elpd_diff (= + 3.0), meaning the model is expected to predict new data better than the original model based on LOO-CV as the metric of comparison. <br><br>
+
 ```{r}
 # Compute LOO-CV for the first model
 loo_all <- loo(nfit)
 
-# exclude x1_sq and x1_x2 from the model
+# Exclude x1_sq and x1_x2 from the model
 X2 <- X[, !colnames(X) %in% c("x1_sq", "x1_x2")]
 poissonreg2_data <- list(N = nrow(X2), p = ncol(X2), x = X2, y = y2, pr_sd = 100)
 
@@ -365,6 +402,36 @@ loo2 <- loo(poissonreg2)
 loo::loo_compare(loo_all, loo2)
 ```
 
+<br>
+
+## 4. Use the results from the second model to create a contour plot showing the log average Poisson intensity as a function of x. In other words, plot $log E_{p(\beta|x,y)}[exp(f(x,\beta))]$ as a function of the two components of x (you can restrict the component ranges from -10 to +10).
+<br>
+
+I create the function and display a contour plot of the log average Poisson intensity as a function of x. <br>
+
+```{r}
+# Define a grid of concentration settings
+x1_seq <- seq(-10, 10, length.out = 1000)
+x2_seq <- seq(-10, 10, length.out = 1000)
+
+# Function to compute the log of the expectation
+log_exp_func <- function(x1, x2, beta){
+  mu_predictive <- mean(beta[,1]) * x1 + mean(beta[, 2]) * x2 + mean(beta[, 3]) * x2^2
+  expected_val <- mean(exp(mu_predictive))
+  return(log(expected_val))
+}
+
+# we take a function that works on scalars and vectorize it so that it can work on vectors in an elementwise fashion
+intensity <- outer(x1_seq, x2_seq, Vectorize(function(x1, x2) log_exp_func(x1, x2, post_smp2)))
+
+# Now, plot the results with contour
+contour(
+  x1_seq, x2_seq, intensity, nlevels=10, xlab = "x_1", ylab = "x_2",
+  main = "contour plot of log of expectation of intensity"
+)
+
+```
+<br><br>
 
 # Applied problem
 
@@ -429,19 +496,22 @@ design1_result %>%
     summarise_at(vars(y), list(name = mean))
 ```
 
+<br><br>
+
 As we can see the result of the first design and its scatter plot, the modulators are correlated with each other and have some effect on the conversion. \
 For instance, when the value of Modulator B are either 0 or 30, the conversion became lower, meanwhile it became higher when Modulator B are either 10, 20. \
 Also, as we can see from the average of each level in modulator A, there seems to be a tipping point around 60.\
-Therefore I set `Inver-Gamma` distribution (\sim) \((\alpha = 1, \beta = 1)\) as a prior for the parameters of the modulators, and use the following model to estimate the parameters of the modulators.
+Therefore I set `Inverse-Gamma` distribution (\sim) \((\alpha = 1, \beta = 1)\) as a prior for the parameters of the modulators, and use the following model to estimate the parameters of the modulators.
 
 Upon runnning the model, I assume
-\(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \mathbb{R}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\). \
+\(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \mathbb{R}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\). 
+
 We model \(y_i\) as
-\[y_i | \beta \sim \text{Normal}(____)\
-]
+\[y_i | \beta \sim \text{Normal}(f(x_i, \beta), \sigma) \]
 
 
-Stan code for the model simulation
+Stan code for the model simulation <br><br>
+
 ```{r}
 reg_half_cauchy_code = "
 // regression model with normal prior for beta
@@ -529,7 +599,9 @@ saveRDS(reg_fit, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw
 reg_fit <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit.rds")
 ```
 
-Check the result of the model
+<br><br>
+Check the result of the model <br><br>
+
 ```{r}
 post_smp_reg <- as.data.frame(reg_fit)
 # rename the columns
@@ -537,7 +609,9 @@ colnames(post_smp_reg)[1:6] <- colnames(X)
 mcmc_areas(post_smp_reg[, 1:6], pars = colnames(X)[1:6], prob = 0.8)
 ```
 
-Bayesian model selection
+<br><br>
+Bayesian model selection <br><br>
+
 ```{r}
 # Compute LOO-CV for the first model
 loo_all <- loo(reg_fit)
@@ -574,8 +648,9 @@ loo::loo_compare(loo_all, loo_without_B_sq)
 loo::loo_compare(loo_without_A_sq, loo_without_B_sq)
 ```
 
+<br><br>
+Create a contour plot of the posterior predictive mean of conversion as a function of concentration settings <br><br>
 
-Create a contour plot of the posterior predictive mean of conversion as a function of concentration settings
 ```{r fig.show="hold", out.width="50%"}
 # extract the posterior samples for further analysis
 # post_smp_reg <- as.data.frame(rstan::extract(reg_fit, permuted = TRUE))
@@ -605,8 +680,9 @@ plot(post_smp_reg$B_sq, type = "l")
 plot(post_smp_reg$A_B, type = "l")
 ```
 
+<br><br>
 Once we have the posterior distributions of the parameters, we can use them to generate the posterior predictive distribution of conversion for any given pair of concentrations.
-Here, I created a contour plot of the posterior predictive mean of conversion as a function of concentration settings to visualize the relationship between the modulators and conversion.
+Here, I created a contour plot of the posterior predictive mean of conversion as a function of concentration settings to visualize the relationship between the modulators and conversion. <br><br>
 
 ```{r}
 # Define a grid of concentration settings
@@ -647,9 +723,10 @@ ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean)) +
   theme_minimal()
 ```
 
-Based on the countour plot, I decided to mostly include the data points which are located within the light green area where the conversion is high.\
+<br><br>
+Based on the countour plot, I decided to mostly include the data points which are located within the light green area where the conversion is high.
 The range of Modulator A is [34.20324, 46.29136] and the range of Modulator B is [9.725183, 22.033089].\
-I will use these ranges to create the second experiment design.
+I will use these ranges to create the second experiment design. <br><br>
 
 ```{r}
 # Set the range for Modulator A
@@ -672,9 +749,6 @@ design2 <- data.frame(A = rangeA, B = rangeB)
 # write a table and save it to csv
 write.table(design2, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/design2.csv", sep = ",", col.names = F, row.names = F)
 ```
-
-
-
 
 
 Try without `A_sq` and `A_B`
