@@ -7,6 +7,7 @@ header-includes:
   - "\\usepackage{listings}"
   - "\\lstset{breaklines=true,breakatwhitespace=true}"
 ---
+
 ```{r setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(
   echo = TRUE,
@@ -24,6 +25,8 @@ library("moments")
 library("rstan")
 library("bayesplot")
 library("StanHeaders")
+library("knitr")
+opts_chunk$set(tidy = TRUE)
 ```
 
 
@@ -75,7 +78,7 @@ The file `hw2 synthetic.csv` is a dataset of count-valued measurements \(y = \{y
 \[y_i | \beta \sim \text{Poisson}(e^{f(x_i,\beta)})\]
 Here, the exponential is to ensure the Poisson rate is always positive, and the function \(f(x_i,\beta) = \beta_0 + \beta_1x_{i,1} + \beta_2x_{i,2} + \beta_3x_{i,1}^2 + \beta_4x_{i,2}^2 + \beta_5x_{i,1}x_{i,2}\). <br><br>
 
-```{r}
+```{r, results='asis'}
 df <- read.csv("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/data/hw2_synthetic.csv")
 head(df)
 ```
@@ -193,7 +196,8 @@ nfit <- rstan::sampling(
 )
 ```
 
-```{r}
+```{r, echo=FALSE}
+
 # Save the model
 saveRDS(nfit, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit.rds")
 # Read the model (-> In this way, no need to run the model again)
@@ -224,7 +228,7 @@ plot(post_smp$x1, type = "l")
 I have checked the histogram of the posterior distribution of the parameters, and it seems that `x1_sq` and `x1_x2` are not significant in the model. Therefore, we try to compare the model with and without `x1_sq` and `x1_x2` to see which model is better. <br>
 
 ```{r}
-mcmc_areas(post_smp, pars = colnames(X), prob = 0.8)
+mcmc_areas(post_smp, pars = colnames(X), prob = 0.95)
 ```
 <br>
 
@@ -248,7 +252,8 @@ nfit2 <- rstan::sampling(
 )
 ```
 
-```{r}
+```{r, echo=FALSE}
+
 # Save the model
 saveRDS(nfit2, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/nfit2.rds")
 # Read the model (-> In this way, no need to run the model again)
@@ -267,14 +272,15 @@ Apparently, without `x1_sq` and `x1_x2`, the posterior distribution of the param
 
 ```{r fig.show="hold", out.width="50%"}
 # Plot comparison of the two models
-mcmc_areas(post_smp, pars = colnames(X), prob = 0.8)
-mcmc_areas(post_smp2, pars = colnames(X2), prob = 0.8)
+mcmc_areas(post_smp, pars = colnames(X), prob = 0.95)
+mcmc_areas(post_smp2, pars = colnames(X2), prob = 0.95)
 ```
 
 <br>
 We can check interval estimates for each predicted observations in both models. <br><br>
 
 ```{r fig.show="hold", out.width="50%"}
+
 # Plot the posterior distribution of the parameters of the base model
 y_rep <- extract(nfit, "y_rep")$y_rep
 
@@ -333,6 +339,7 @@ We have checked some of the posterior predictive distribution of the parameters 
 In addition to the plots above, we can also check and compare the posterior predictive distributions of the conversion for each model by plotting some histograms and high density estimates.
 
 ```{r fig.show="hold", out.width="50%"}
+
 # Plot the posterior predictive distribution of the parameters of the base model
 posterior_samples <- rstan::extract(nfit, permuted = TRUE)
 y_rep_samples <- posterior_samples$y_rep
@@ -372,12 +379,12 @@ ppc_dens_overlay(y2, y_rep_samples2[1:50, ]) +
 
 
 Plots above gave us a hint but they are not clear. Hence, we can also compare the models using Leave-One-Out Cross-Validation method (LOO-CV).\
-Here, the key output metrics are: <br><br>
+Here, the key output metrics are: <br>
 
 * elpd_diff: The difference in expected log pointwise predictive density. Positive values indicate that the model on the row is expected to make better predictions (on average) than the model/column used for comparison.\
 * se_diff: The standard error of the difference.
 
-Reduced model has a better elpd_diff (= + 3.0), meaning the model is expected to predict new data better than the original model based on LOO-CV as the metric of comparison. <br><br>
+Reduced model has a better elpd_diff (= + 3.0), meaning the model is expected to predict new data better than the original model based on LOO-CV as the metric of comparison. <br>
 
 ```{r}
 # Compute LOO-CV for the first model
@@ -410,6 +417,7 @@ loo::loo_compare(loo_all, loo2)
 I create the function and display a contour plot of the log average Poisson intensity as a function of x. <br>
 
 ```{r}
+
 # Define a grid of concentration settings
 x1_seq <- seq(-10, 10, length.out = 1000)
 x2_seq <- seq(-10, 10, length.out = 1000)
@@ -435,7 +443,7 @@ contour(
 
 # Applied problem
 
-## first design selection
+## First design selection
 My first approach is to run the eperiments with 24 wells initially, followed by 48 wells in the second experiments. 
 The reason for this is that I want to see if the 24 wells are enough to get the information about the mean and variance of the population so that I can set a reasonable prior for the second experiment.
 I will assign pairs of concentrations for the two chemical modulators to each well in the manner as below. The main focus is to see how the effect of the one modulator changes depending on the concentration of the other modulator.
@@ -453,7 +461,7 @@ write.table(design1, file = "/Users/satoshiido/Documents/statistical-analysis/65
 ```
 
 
-## second design selection
+## Second design selection
 Based on the result of the first experiment, I will take a Bayesian approach to run the second experiment with 48 wells.
 Mainly, I will take the following five steps to create the second experiment design.
 * Build Bayesian Model: Perform Bayesian inference on the first 24 runs to estimate the model parameters.
@@ -496,21 +504,21 @@ design1_result %>%
     summarise_at(vars(y), list(name = mean))
 ```
 
-<br><br>
+<br>
 
 As we can see the result of the first design and its scatter plot, the modulators are correlated with each other and have some effect on the conversion. \
 For instance, when the value of Modulator B are either 0 or 30, the conversion became lower, meanwhile it became higher when Modulator B are either 10, 20. \
 Also, as we can see from the average of each level in modulator A, there seems to be a tipping point around 60.\
-Therefore I set `Inverse-Gamma` distribution (\sim) \((\alpha = 1, \beta = 1)\) as a prior for the parameters of the modulators, and use the following model to estimate the parameters of the modulators.
+Therefore I set `Inverse-Gamma` distribution $\sim (\alpha = 1, \beta = 1)$ as a prior for the parameters of the modulators, and use the following model to estimate the parameters of the modulators., and use the following model to estimate the parameters of the modulators.
 
 Upon runnning the model, I assume
-\(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \mathbb{R}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\). 
+\(y = \{y_1 , \ldots , y_n\}\), with \(y_i \in \mathbb{R}\). Each output \(y_i\) has an associated \(x_i = (x_{i,1}, x_{i,2}) \in \mathbb{R}^2\), and write \(x = \{x_1, \ldots, x_n\}^{\prime}\) as \(x\).
 
 We model \(y_i\) as
 \[y_i | \beta \sim \text{Normal}(f(x_i, \beta), \sigma) \]
 
 
-Stan code for the model simulation <br><br>
+Stan code for the model simulation <br>
 
 ```{r}
 reg_half_cauchy_code = "
@@ -588,7 +596,8 @@ reg_fit <- rstan::sampling(
   data = reg1_data,
   iter = 10000,
   warmup = 2000,
-  chains = 4
+  chains = 2,
+  seed = 9
 )
 ```
 
@@ -599,57 +608,48 @@ saveRDS(reg_fit, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw
 reg_fit <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit.rds")
 ```
 
-<br><br>
-Check the result of the model <br><br>
+<br>
+Check the result of the model <br>
 
 ```{r}
 post_smp_reg <- as.data.frame(reg_fit)
 # rename the columns
 colnames(post_smp_reg)[1:6] <- colnames(X)
-mcmc_areas(post_smp_reg[, 1:6], pars = colnames(X)[1:6], prob = 0.8)
+mcmc_areas(post_smp_reg[, 1:6], pars = colnames(X)[1:6], prob = 0.95)
 ```
 
-<br><br>
-Bayesian model selection <br><br>
+<br>
+Bayesian model selection\
+Reduced model has a better elpd_diff (= + 2.8), meaning the model is expected to predict new data better than the original model based on LOO-CV as the metric of comparison.
+<br>
 
 ```{r}
 # Compute LOO-CV for the first model
 loo_all <- loo(reg_fit)
 
-# Fit the second model (without A_sq predictor)
-X_without_A_sq <- X[, !colnames(X) %in% "A_sq"]
-reg1_data_without_A_sq <- list(N = nrow(X_without_A_sq), p = ncol(X_without_A_sq), x = X_without_A_sq, y = y, pr_sd = 100)
-reg_fit_without_A_sq <- rstan::sampling(
-  object = reg_half_cauchy,
-  data = reg1_data_without_A_sq,
-  iter = 10000,
-  warmup = 2000,
-  chains = 2
-)
-# Compute LOO-CV for the second model
-loo_without_A_sq <- loo(reg_fit_without_A_sq)
+# Exclude A_sq and A_B from the model
+X_non <- X[, !colnames(X) %in% c("A_sq", "A_B")]
+reg1_data_non <- list(N = nrow(X_non), p = ncol(X_non), x = X_non, y = y, pr_sd = 100)
 
-# Fit the thrid model (without A_sq predictor)
-X_without_B_sq <- X[, !colnames(X) %in% "B_sq"]
-reg1_data_without_B_sq <- list(N = nrow(X_without_B_sq), p = ncol(X_without_B_sq), x = X_without_B_sq, y = y, pr_sd = 100)
-reg_fit_without_B_sq <- rstan::sampling(
+reg_fit_non <- rstan::sampling(
   object = reg_half_cauchy,
-  data = reg1_data_without_B_sq,
+  data = reg1_data_non,
   iter = 10000,
   warmup = 2000,
-  chains = 2
+  chains = 2,
+  seed = 9
 )
-# Compute LOO-CV for the thrid model
-loo_without_B_sq <- loo(reg_fit_without_B_sq)
+
+# Compute LOO-CV for the second model
+loo2 <- loo(reg_fit_non)
 
 # Compare the models
-loo::loo_compare(loo_all, loo_without_A_sq)
-loo::loo_compare(loo_all, loo_without_B_sq)
-loo::loo_compare(loo_without_A_sq, loo_without_B_sq)
+loo::loo_compare(loo_all, loo2)
 ```
 
-<br><br>
-Create a contour plot of the posterior predictive mean of conversion as a function of concentration settings <br><br>
+
+<br>
+Create a contour plot of the posterior predictive mean of conversion as a function of concentration settings <br>
 
 ```{r fig.show="hold", out.width="50%"}
 # extract the posterior samples for further analysis
@@ -680,9 +680,9 @@ plot(post_smp_reg$B_sq, type = "l")
 plot(post_smp_reg$A_B, type = "l")
 ```
 
-<br><br>
+<br>
 Once we have the posterior distributions of the parameters, we can use them to generate the posterior predictive distribution of conversion for any given pair of concentrations.
-Here, I created a contour plot of the posterior predictive mean of conversion as a function of concentration settings to visualize the relationship between the modulators and conversion. <br><br>
+Here, I created a contour plot of the posterior predictive mean of conversion as a function of concentration settings to visualize the relationship between the modulators and conversion. <br>
 
 ```{r}
 # Define a grid of concentration settings
@@ -723,10 +723,10 @@ ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean)) +
   theme_minimal()
 ```
 
-<br><br>
+<br>
 Based on the countour plot, I decided to mostly include the data points which are located within the light green area where the conversion is high.
 The range of Modulator A is [34.20324, 46.29136] and the range of Modulator B is [9.725183, 22.033089].\
-I will use these ranges to create the second experiment design. <br><br>
+I will use these ranges to create the second experiment design. <br>
 
 ```{r}
 # Set the range for Modulator A
@@ -751,50 +751,115 @@ write.table(design2, file = "/Users/satoshiido/Documents/statistical-analysis/65
 ```
 
 
-Try without `A_sq` and `A_B`
-```{r}
-# create the data for stan simulation
-X <- design1_result[, c("A", "B", "B_sq")]
-X[, "Offset"] <- 1
-y <- design1_result$y
+## Third design selection
+> Post experimental analysis
+After the second experiment, I have a total of 72 wells (24 wells from the first experiment and 48 wells from the second experiment).
+I use the results both from the first experiment and the second experiment to build a Bayesian regression model.
+Based on the model, I create the posterior predictive distribution of the concentration settings that yield maximum conversion and the distribution of the conversion corresponding to a specific point prediction of the concentration.
 
+```{r}
+# resulf of the first experiment
+design2_result <- read.table("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/data/rslt2.csv")
+colnames(design2_result) <- c("A", "B", "y")
+design2_result
+```
+
+```{r}
+# Combine two results
+y2 <- c(design1_result$y, design2_result$y)
+A2 <- c(design1_result$A, design2_result$A)
+B2 <- c(design1_result$B, design2_result$B)
+
+# standardize the data
+A2 <- (A2 - mean(A2)) / sd(A2)
+B2 <- (B2 - mean(B2)) / sd(B2)
+
+# combine them
+X2 <- data.frame(cbind(B2, A2 * B2, B2^2, B2^3))
+X2[, "Offset"] <- 1
+colnames(X2) <- c("B", "A_B", "B_sq", "B_3", "Offset")
+```
+
+```{r}
 # compile the model
-reg2_data <- list(N = nrow(X), p = ncol(X), x = X, y = y, pr_sd = 100)
+reg2_data <- list(N = nrow(X2), p = ncol(X2), x = X2, y = y2, pr_sd = 100)
+# Fit the model and sampling
 reg_fit2 <- rstan::sampling(
   object = reg_half_cauchy,
   data = reg2_data,
   iter = 10000,
   warmup = 2000,
-  chains = 2
+  chains = 2,
+  seed = 9
 )
-# save the model
-saveRDS(reg_fit2, file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit2.rds")
-# read the model
-reg_fit2 <- readRDS(file = "/Users/satoshiido/Documents/statistical-analysis/656/hw/hw2/outputs/reg_fit2.rds")
-# turn the posterior samples into a data frame
-post_smp_reg <- as.data.frame(reg_fit2)
-# rename the columns
-colnames(post_smp_reg)[1:4] <- colnames(X)
-mcmc_areas(post_smp_reg[, 1:4], pars = colnames(X)[1:4], prob = 0.8)
 
-# compile the model
-predictive_means2 <- apply(grid, 1, function(row) {
+post_smp_reg2 <- as.data.frame(reg_fit2)
+# rename the columns
+colnames(post_smp_reg2)[1:5] <- colnames(X2)
+# extract the posterior prediction for further analysis
+y_rep <- extract(reg_fit2)$y_rep
+
+```
+
+<br>
+We can check interval estimates for each predicted observations of the model and an error in the predicted Y's. 
+From the plot, we can see that the model is not really good at predicting the conversion when the conversion is high, yet we still proceed with this model.<br>
+
+```{r fig.show="hold", out.width="50%"}
+## Interval estimates for each predicted observations (columns) in y_pred
+ppd_intervals(y_rep, x = y2) +
+  geom_abline(intercept = 0, slope = 1, color = "grey") +
+  ggplot2::labs(y = "Predicted Ys", x = "Observed Ys") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
+
+ppd_intervals(t(t(y_rep) - y2), x = y2) +
+  geom_abline(intercept = 0, slope = 0) +
+  ggplot2::labs(y = "Errors in predicted Y's", x = "Observed Y's") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
+```
+
+<br>
+The regression coefficients was investigated to verify that some of the parameters in the model are significant at a 5% significance level. <br>
+
+```{r fig.show="hold"}
+mcmc_areas(post_smp_reg2[1:5], pars = colnames(X2)[1:5], prob = 0.95)
+```
+
+<br>
+From the outputs above, $f(x, \beta) = \beta_0 + \beta_1 \times B + \beta_2 \times A\_B + \beta_3 \times B^2 + \beta_4 \times B^3$ as the optimal fitting model, given the available data.<br>
+
+```{r}
+# Define a grid of concentration settings
+modulator_A_seq <- seq(0, 80, length.out = 100)
+modulator_B_seq <- seq(0, 30, length.out = 100)
+
+# standardize the data
+modulator_A_seq_standardized <- (modulator_A_seq - mean(modulator_A_seq)) / sd(modulator_A_seq)
+modulator_B_seq_standardized <- (modulator_B_seq - mean(modulator_B_seq)) / sd(modulator_B_seq)
+
+grid <- expand.grid(modulator_A = modulator_A_seq_standardized, modulator_B = modulator_B_seq_standardized)
+
+# Compute the posterior predictive mean of conversion for each pair of concentration settings
+predictive_means <- apply(grid, 1, function(row) {
   modulator_A <- row["modulator_A"]
   modulator_B <- row["modulator_B"]
 
   # Compute the predictive mean using the model equation and the posterior samples
-  mean_predictive <- mean(post_smp_reg$A * modulator_A +
-                          post_smp_reg$B * modulator_B +
-                          post_smp_reg$B_sq * modulator_B^2
+  mean_predictive <- mean(post_smp_reg2$B * modulator_B +
+                          post_smp_reg2$A_B * (modulator_A * modulator_B) +
+                          post_smp_reg2$B_sq * modulator_B^2 +
+                          post_smp_reg2$B_3 * modulator_B^3
                           )
   return(mean_predictive)
 })
 
 # Add the computed predictive means to the grid
-grid$predictive_mean2 <- predictive_means2
+grid$predictive_mean <- predictive_means
 
 # Plot the contour
-ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean2)) +
+ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean)) +
   geom_contour(aes(color = ..level..)) +
   scale_color_viridis_c() +
   labs(title = "Contour Plot of Posterior Predictive Mean of Conversion",
@@ -802,5 +867,94 @@ ggplot(grid, aes(x = modulator_A, y = modulator_B, z = predictive_mean2)) +
        y = "Modulator B",
        color = "Predictive Mean") +
   theme_minimal()
+```
 
+<br>
+
+Now contour plots will be generated to investigate the areas of maximum log of `E[exp(conversion rate)]` according to the chosen model.
+
+```{r}
+beta <- extract(reg_fit2)$beta
+
+# Define a grid of concentration settings
+A_seq <- seq(0.1, 7, length.out = 30)
+B_seq <- seq(-7, 5, length.out = 30)
+
+# Function to compute the log of the expectation
+log_exp_func <- function(A, B, beta){
+  mu_predictive <- mean(beta[,1]) * B + mean(beta[, 2]) * A * B + mean(beta[, 3]) * B^2 + mean(beta[, 4]) * B^3
+  expected_val <- mean(exp(mu_predictive))
+  return(log(expected_val))
+}
+
+# we take a function that works on scalars and vectorize it so that it can work on vectors in an elementwise fashion
+intensity <- outer(A_seq, B_seq, Vectorize(function(A, B) log_exp_func(A, B, post_smp_reg2)))
+
+# Now, plot the results with contour
+contour(
+  A_seq, B_seq, intensity, nlevels=10, xlab = "A", ylab = "B",
+  main = "contour plot of log of expectation of Conversion"
+)
+```
+
+<br>
+Based on the Bayesian model which I built above, I create the posterior predictive distribution of the concentration settings that yield maximum conversion.<br>
+
+```{r fig.show="hold", out.width="50%"}
+beta <- extract(reg_fit2)$beta
+
+conversion_rate <- function(A, B, index) {
+  X <- cbind(B, A * B, B^2, B^3, 1)
+  # mean(beta[,1]) * B + mean(beta[, 2]) * A * B + mean(beta[, 3]) * B^2 + mean(beta[, 4]) * B^3
+  conversion_rate <- X%*%beta[index, ]
+  return(conversion_rate)
+}
+
+
+max_conversion_rates <- function(A_seq, B_seq) {
+  rates <- matrix(0, nrow = length(A_seq), ncol = length(B_seq))
+  for (i in 1:nrow(beta)) {
+    rates <- rates + outer(A_seq, B_seq, conversion_rate, i)
+  }
+  return(rates / nrow(beta))
+}
+
+max_concentration <- function(A_seq, B_seq, index) {
+  rates <- outer(A_seq, B_seq, conversion_rate, index)
+  m <- which(rates == max(rates), arr.ind = TRUE)[1, ]
+  return(c(A_seq[m[1]], B_seq[m[2]])
+  )
+}
+
+A_seq <- seq(0.1, 7, length.out = 40)
+B_seq <- seq(0, 5, length.out = 40)
+
+max_concentration_set <- matrix(nrow = nrow(beta), ncol = 2)
+for (i in 1:nrow(beta)) {
+  max_concentration_set[i, ] <- max_concentration(A_seq, B_seq, i)
+}
+
+
+hist(max_concentration_set[,1] * sd(A2) + mean(A2), breaks=20, main="Posterior Predictive Modulator A Concentration which Yields Maximum Conversion", xlab="Modulator A")
+hist(max_concentration_set[,2] * sd(B2) + mean(B2), breaks = 20, main = "Posterior Predictive Modulator B Concentration which Yields Maximum Conve", xlab="Modulator B")
+```
+
+
+Finally, we plot the distribution of the conversion corresponding to a specific point prediction of the concentration.
+```{r}
+avg_rate <- max_conversion_rates(A_seq, B_seq)
+index <- which(avg_rate == max(avg_rate), arr.ind = TRUE)[1, ]
+A_max <- A_seq[index[1]] * sd(A2) + mean(A2)
+B_max <- B_seq[index[2]] * sd(B2) + mean(B2)
+
+conversion_rates <- matrix(nrow = nrow(beta), ncol = 1)
+for (i in 1:nrow(beta)) {
+  conversion_rates[i] <- conversion_rate((A_max - mean(A2)) / sd(A2), (B_max - mean(B2)) / sd(B2), i)
+}
+```
+
+The histogram below shows the posterior predictive distribution of the conversion corresponding to the point prediction of concentrations which yields maximum conversion. <br>
+
+```{r}
+hist(conversion_rates, breaks = 30)
 ```
