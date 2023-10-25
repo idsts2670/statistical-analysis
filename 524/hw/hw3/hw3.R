@@ -2,8 +2,6 @@
 library("tidyverse")
 library("car")
 library("ggplot2")
-library("dplyr")
-library("tidyr")
 library("MASS")
 library("zoom")
 library("MVN")
