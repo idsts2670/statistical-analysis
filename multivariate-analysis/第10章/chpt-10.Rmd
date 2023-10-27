@@ -8,7 +8,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## 男女別のクロス集計表の作成
-#データの読み込み
+データの読み込み
 ```{r}
 bdat <- read.csv('自転車データ.csv')
 bdat
