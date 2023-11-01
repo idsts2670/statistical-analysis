@@ -337,7 +337,7 @@ Comment on how the posterior distributions differ from each other. Use each mode
 From the result of the posterior distribution, model2 seems to work better. 
 
 The model1 allows more randomness among the prediction, and thus it has wider variation of data. the model2 is more conservative and gives us the values closer to \( \bar{\theta} \).
-```{r tidy=TRUE, tidy.opts=list(arrow=TRUE, indent=2, width.cutoff=50)}
+```{r tidy=TRUE, tidy.opts=list(arrow=TRUE, width.cutoff=45)}
 # posterior
 number_draws <- 50000
 
@@ -387,9 +387,9 @@ Your hierarchical model should allow statistical sharing among individuals and p
 
 Firstly, we define a parameter as below:
 
-
-```{r tidy=TRUE, tidy.opts=list(arrow=TRUE, indent=2, width.cutoff=40)}
-stroop <- read.csv("/Users/satoshiido/Documents/statistical-analysis/656/hw/hw3/stroop_dataset.csv")
+```{r}
+stroop <- read.csv("
+/Users/satoshiido/Documents/statistical-analysis/656/hw/hw3/stroop_dataset.csv")
 head(stroop)
 ```
 
@@ -399,8 +399,9 @@ head(stroop)
   & y_{ij} \mid \theta_i, \mu, \tau^2, \sigma_j^2, x_{ij}, s^2 \sim \text{N}(x_{ij}, s^2)
 \end{align*}
 
-\( y_{ij} \) here is the stroop effect of individual \( i \) for color \( j \).  \\
-\( x_{ij} \) here is the mean of stroop effect of individual \( i \) for color \( j \), and \( \theta_i \) is the difference of the mean reaction times for individual \( i \) under incongruent and congruent settings. Therefore, we are interested in parameters \( x_{ij} \) and \( \theta_i^2 \). \\
+\( y_{ij} \) here is the stroop effect of individual \( i \) for color \( j \). \\
+
+\( x_{ij} \) here is the mean of stroop effect of individual \( i \) for color \( j \), and \( \theta_i \) is the difference of the mean reaction times for individual \( i \) under incongruent and congruent settings. Therefore, we are interested in parameters \( x_{ij} \) and \( \theta_i^2 \).
 
 For our response, we will use the mean of the difference of observations both in incongruent and congruent settings. We then fit the model with Stan to predict \( y_{ij} \).
 
@@ -459,9 +460,18 @@ model {
 hier_model = stan_model(model_code = hierarchical_cauchy_model)
 ```
 
-```{r tidy=TRUE, tidy.opts=list(arrow=TRUE, indent=2, width.cutoff=50)}
-hier_data <- list(N = nrow(diff_color_effect), diff_red = diff_color_effect$red, diff_green = diff_color_effect$green, diff_blue = diff_color_effect$blue)
-nfit <- sampling(hier_model, data = hier_data, iter = 10000, warmup = 2000, chains = 1)
+```{r}
+hier_data <- list(
+  N = nrow(diff_color_effect),
+  diff_red = diff_color_effect$red,
+  diff_green = diff_color_effect$green,
+  diff_blue = diff_color_effect$blue
+)
+nfit <- sampling(
+  hier_model,
+  data = hier_data,
+  iter = 10000, warmup = 2000, chains = 1
+)
 ```
 
 ```{r tidy=TRUE, tidy.opts=list(arrow=TRUE, indent=2, width.cutoff=50)}
@@ -495,20 +505,32 @@ As we can see the plots, all of the parameters (color) are the significant.
 
 the posterior distribution of the mean effect across all the individual responses to three color are all positive. Therefore, we can say that the reaction time in the incongruent condition is on average larger than in the congruent condition.
 
-```{r tidy=TRUE, tidy.opts=list(arrow=TRUE, indent=2, width.cutoff=60), fig.show="hold", out.width="70%"}
+```{r}
 mcmc_areas(row_vec) +
-  scale_y_discrete(labels = c("rowmean_post_red" = expression(paste("RT[red]")), "rowmean_post_green" = expression(paste("RT[green]")), "rowmean_post_blue" = expression(paste("RT[blue]")))) +
-  ggtitle("Posterior distribution of the mean effect across all the individual responses to three color") +
+  scale_y_discrete(labels = c(
+    "rowmean_post_red" = expression(paste("RT[red]")),
+    "rowmean_post_green" = expression(paste("RT[green]")),
+    "rowmean_post_blue" = expression(paste("RT[blue]"))
+  )) +
+  ggtitle("Posterior distribution of the mean effect 
+  across all the individual responses to three color") +
   theme(plot.title = element_text(size = 20))
 ```
 
 We can check the posterior distribution of the standard deviation of the mean effect across all the individual responses to three color as below:
 
-```{r tidy=TRUE, tidy.opts=list(arrow=TRUE, indent=2, width.cutoff=60), fig.show="hold", out.width="70%"}
+```{r}
+
 mcmc_areas(post_smp[c(52:54)], prob = 0.8) +
-  scale_y_discrete(labels=c("sigma[1]" = expression(paste("sigma[red]")), "sigma[2]" = expression(paste("sigma[green]")), "sigma[3]" = expression(paste("sigma[blue]")))) +
-  ggtitle("Posterior distribution of the standard deviation of the mean effect across all the individual responses to three color") +
+  scale_y_discrete(labels = c(
+    "sigma[1]" = expression(paste("sigma[red]")),
+    "sigma[2]" = expression(paste("sigma[green]")),
+    "sigma[3]" = expression(paste("sigma[blue]"))
+  )) +
+  ggtitle("Posterior distribution of the standard deviation of 
+  the mean effect across all the individual responses to three color") +
   theme(plot.title = element_text(size = 15))
+
 ```
 
 The 95% credible interval of the mean effect across all the individual responses to three color are:
@@ -522,7 +544,7 @@ The 95% credible interval of the mean effect across all the individual responses
 
 Regarding the standard deviation of the mean effect across all the individual responses to three color, we can see there is significance among individuals.
 
-```{r tidy=TRUE, tidy.opts=list(arrow=TRUE, indent=2, width.cutoff=70), fig.show="hold", out.width="70%"}
+```{r tidy=TRUE, tidy.opts=list(arrow=TRUE, indent=2, width.cutoff=70), fig.show="hold", out.width="90%"}
 individual_RT <- matrix(0, nrow = 50)
 
 for(i in 1:50){
