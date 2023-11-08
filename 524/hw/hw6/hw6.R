@@ -12,5 +12,80 @@ main_path <- file.path(current_note_path, "524/hw")
 
 # 8.12
 # data setup
-col_names <- c("Total_population", "Professional_degree", "Employed_age_over_16", "Government_employement", "Median_home_value")
-df <-  read.table(file.path(main_path, "hw3/T4-6.txt"), header=FALSE, col.names=col_names)
+col_names <- c("Wind", "Solar_radiation", "CO", "NO", "NO_2", "O3", "HC")
+df <- read.table(file.path(main_path, "hw6/T1-5.txt"), header=FALSE, col.names=col_names)
+
+
+# PCA using prcomp function
+## PCA using the covariance matrix S
+pca_cov <- prcomp(df, scale = FALSE)
+
+## PCA using the correlation matrix R (data is scaled to have unit variance)
+pca_cor <- prcomp(df, scale = TRUE)
+
+## Compare the results
+summary(pca_cov)
+summary(pca_cor)
+pca_cov$rotation # For the covariance matrix S
+pca_cor$rotation # For the correlation matrix R
+
+# to create a scree plot
+plot(pca_cov)
+plot(pca_cor)
+# to create a biplot
+biplot(pca_cov)
+biplot(pca_cor)
+
+# PCA manually calculated
+## covariance matrix and correlation matrix
+S <- cov(df)
+R <- cor(df)
+
+## eigenvalues and eigenvectors with S
+eigen_S <- eigen(S)
+eigen_S$values
+## eigenvalues and eigenvectors with R
+eigen_R <- eigen(R)
+eigen_R$values
+
+# calculate loadings for the covariance matrix S
+# loadings are the eigenvectors scaled by the square root of the eigenvalues (=standard deviations)
+loadings_S <- eigen_S$vectors %*% diag(sqrt(eigen_S$values))
+loadings_R <- eigen_R$vectors %*% diag(sqrt(eigen_R$values))
+
+## PCA scores with S
+scores_S <- as.matrix(df) %*% eigen_S$vectors
+## PCA scores with R
+df_standardized <- scale(df)
+scores_R <- as.matrix(df_standardized) %*% eigen_R$vectors
+
+# calculate standard deviation of each PC
+std_dev_S <- sqrt(eigen_S$values)
+std_dev_R <- sqrt(eigen_R$values)
+
+
+## calculate proportion of variance explained by each PC
+prop_var_S <- eigen_S$values / sum(eigen_S$values)
+prop_var_R <- eigen_R$values / sum(eigen_R$values)
+
+# calculate cumulative proportion of variance explained
+cum_prop_var_S <- cumsum(prop_var_S)
+cum_prop_var_R <- cumsum(prop_var_R)
+
+# create a summary list for the PCA based on S
+summary_S <- list(
+  std_dev = std_dev_S,
+  prop_var = prop_var_S,
+  cum_prop_var = cum_prop_var_S,
+  loadings = loadings_S
+)
+# Create a summary list for the PCA based on R
+summary_R <- list(
+  std_dev = std_dev_R,
+  prop_var = prop_var_R,
+  cum_prop_var = cum_prop_var_R,
+  loadings = loadings_R
+)
+
+# Results
+list(S = summary_S, R = summary_R)
