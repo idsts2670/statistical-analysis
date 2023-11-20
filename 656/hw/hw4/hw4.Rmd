@@ -1,0 +1,298 @@
+---
+title: "STAT 656 HW 4"
+author: "Satoshi Ido (ID: 34788706)"
+date: "November 19, 2023"
+output: 
+  pdf_document:
+  code_folding: show
+  header-includes:
+    - "\\usepackage{listings}"
+    - "\\lstset{breaklines=true,breakatwhitespace=true}"
+---
+
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+```{r  warning=FALSE, message=FALSE, include=FALSE}
+library("ggplot2")
+library("tidyverse")
+library("MASS")
+library("fs")
+library("moments")
+library("rstan")
+library("bayesplot")
+library("StanHeaders")
+library("knitr")
+library("invgamma")
+library("cowplot")
+# opts_chunk$set(tidy = TRUE)
+```
+
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# set options to speed up the calculations
+# To avoid recompilation of unchanged Stan programs, we recommend calling
+rstan_options(auto_write = TRUE)
+# For execution on a local, multicore CPU with excess RAM we recommend calling
+options(mc.cores = parallel::detectCores())
+# Set the size of the plots
+options(repr.plot.width = 12, repr.plot.height = 6)
+
+# Options(bayesplot::theme_default())
+bayesplot_theme_set(theme_default(base_size = 24, base_family = "sans"))
+```
+
+<center>
+# Gibbs sampler for the probit model
+</center>
+
+<br><br>
+
+Consider \( N \) pairs of observations \( (x_i , y_i) \), where \( x_i \in \mathbb{R}^d \) and \( y_i \in \{0, 1\} \). These are generated as follows: 
+\begin{align*}
+z_i &\sim \text{N}(x_i \beta, 1), & y_i &= 1(z_i > 0), & i &\in \{1,...,N\}.
+\end{align*}
+This is thus the probit model of Lecture 16-17. Write \( X \), \( Y \), and \( Z \) for the collection of \( x_i \), \( y_i \) and \( z_i \)'s. We will place a \( \text{N}(0,\Sigma_b) \) prior on \( \beta \in \mathbb{R}^d \), and draw samples from the posterior \( p(\beta,Z|X,Y) \). Observe that as in regression settings, we are really only interested in \( \beta \), the \( Z \)'s are only auxiliary variables to allow us to implement a Gibbs sampler. In other words, this is an example of a data-augmentation algorithm.
+
+<br><br>
+
+### Q1
+> Derive and write down the conditional distribution \( Z|X, Y, \beta \).
+
+To derive the conditional distribution \( Z|X, Y, \beta \), we need to consider the nature of the probit model and the fact that \( Z \) is essentially a latent variable that informs the observed binary outcomes \( Y \). Given the setup, \( z_i \sim N(x_i \beta, 1) \) and \( y_i = 1(z_i > 0) \), the \( P(z_i|x_i,y_i,\beta) \) is as follows:
+
+\begin{align*}
+    f(z_i|x_i,y_i,\beta) &\propto P(y_i|x_i,z_i,\beta) \\
+    &= P(y_i|z_i)P(z_i|\beta,x_i)P(\beta|x_i) \\
+    &\propto P(y_i|z_i)\phi(z_i; x_i \beta, 1) \\
+    &= P(y_i|z_i)\frac{1}{\sqrt{2\pi}} \exp\left(-\frac{(z_i - x_i \beta)^2}{2}\right) \\
+    &\propto P(y_i|z_i) \exp\left(-\frac{(z_i - x_i \beta)^2}{2}\right)
+\end{align*}
+
+   - If \( y_i = 1 \), it means \( z_i \) was greater than 0. Hence, the density function \( \phi(z_i; x_i \beta, 1) \) is truncated below at 0.
+   - If \( y_i = 0 \), it means \( z_i \) was less than or equal to 0. Hence, the density function is truncated above at 0.
+
+This means we need to normalize the truncated densities. We divide \( \phi(z_i; x_i \beta, 1) \) by the cumulative distribution function \( \Phi(0; x_i \beta, 1) \) for \( y_i = 1 \) and \( 1 - \Phi(0; x_i \beta, 1) \) for \( y_i = 0 \).
+Therefore,
+\begin{align*}
+    f(z_i | x_i, y_i, \beta) =
+    \begin{cases} 
+        \frac{\phi(z_i; x_i \beta, 1)}{\Phi(0; x_i \beta, 1)} & = \frac{\frac{1}{\sqrt{2\pi}} \exp\left(-\frac{(z_i - x_i \beta)^2}{2}\right)}{\frac{1}{\sqrt{2\pi}} \int_{-\infty}^{0} \exp\left(-\frac{(t - x_i \beta)^2}{2}\right) dt}, \quad \text{if } y_i = 1 \\
+        \frac{\phi(z_i; x_i \beta, 1)}{1 - \Phi(0; x_i \beta, 1)} & = \frac{\frac{1}{\sqrt{2\pi}} \exp\left(-\frac{(z_i - x_i \beta)^2}{2}\right)}{1 - \frac{1}{\sqrt{2\pi}} \int_{-\infty}^{0} \exp\left(-\frac{(t - x_i \beta)^2}{2}\right) dt}, \quad \text{if } y_i = 0 
+    \end{cases}
+\end{align*}
+
+<br><br>
+
+### Q2
+> Derive and write down the conditional distribution \( P(\beta|X, Y, Z) \)
+
+Given the prior \( \beta \sim N(0, \Sigma_b) \), the likelihood from the probit model, and the augmentation with \( Z \), we can derive the conditional distribution \( P(\beta|X, Y, Z) \).
+
+The likelihood part of the posterior is proportional to \( \exp\left(-\frac{1}{2} \sum_{i=1}^{N} (z_i - x_i \beta)^2\right) \), and the prior part is proportional to \( \exp\left(-\frac{1}{2} \beta^T \Sigma_b^{-1} \beta\right) \). where \( \Sigma_b^{-1} \) is the inverse of the covariance matrix. Combining these, we get the posterior:
+
+\begin{align*}
+    p(\beta|X, Y, Z) 
+    &\propto p(\beta)p(X, Y, Z | \beta) \\
+    &\propto \exp\left(-\frac{1}{2} \sum_{i=1}^{N} (z_i - x_i \beta)^2 - \frac{1}{2} \beta^T \Sigma_b^{-1} \beta\right) \\
+\end{align*}
+
+### Q3
+> Describe the overall Gibbs sampling algorithm, and how you would calculate the posterior mean and covariance of \(\beta \).
+
+The Gibbs sampling algorithm involves iteratively sampling from the conditional distributions:
+
+1. Initialize \( \beta^{(0)} \) and \( Z^{(0)} \).
+2. For each iteration \( t \):
+   - Sample \( Z^{(t)} \) from \( p(Z|X, Y, \beta^{(t-1)}) \) using the truncated normal distributions.
+   - Sample \( \beta^{(t)} \) from \( p(\beta|X, Y, Z^{(t)}) \) using the derived normal distribution.
+
+After a burn-in period, the samples of \( \beta \) can be used to approximate the posterior distribution.
+
+We can estimate the posterior mean and covariance of \( \beta \) as follows:
+- Posterior Mean of \( \beta \): This can be estimated by taking the average of the \( \beta \) samples after burn-in.
+- Posterior Covariance of \( \beta \): This can be estimated by calculating the sample covariance of the \( \beta \) samples after burn-in.
+
+
+### Q4.
+> Write an R function to implement the VB algorithm for the probit model. This should accept as input a dataset (X, Y) and return the approximations to the posterior distributions over \( \beta \) and the z's. Recall how the algorithm proceeds: start with some arbitrary initial distribution q(\( \beta \)) over \( \beta \), use that to calculate the q(zi)'s, use those to calculate q(\( \beta \)), and repeat till these distributions stop changing.
+
+In this section, we'll implement the Variational Bayes (VB) algorithm for the probit model, as discussed in Lectures 16-17. The function `probitVB` will be designed to work as follows:
+
+- Input: The function will accept a dataset comprising two components, `X` and `Y`.
+- Output: It will return approximations to the posterior distributions over the parameters \( \beta \) and the latent variables `z's`.
+
+The algorithm follows these steps:
+
+we use the approximation that \( P(\beta, z | X, y) \approx q(z)q(\beta) \)
+
+1. Initialize with an arbitrary distribution \( q(\beta) \) over \( \beta \).
+2. Iterate through the following steps until convergence:
+   - Utilize \( q(\beta) \) to compute the distributions \( q(z_i) \) for each \( i \).
+   - Use the \( q(z_i) \) distributions to update \( q(\beta) \).
+
+
+The iteration continues until the changes in the distributions become negligibly small, indicating convergence.
+
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+probitVB <- function(X, y, max.iter, tol = 1e-6) {
+  N <- nrow(X)          # number of observations
+  d <- ncol(X)          # dimensionality of beta
+  sigma_beta <- diag(d) # prior covariance matrix for beta, can be adjusted
+
+  # initialize q(beta) as a normal distribution where mean=0, covariance=sigma_beta
+  mu_beta <- rep(0, d)
+  sigma_beta_q <- sigma_beta
+
+  # main VB iteration loop
+  for (iter in 1:max.iter) {
+    # E-step: update q(z_i)'s based on current q(beta)
+    mu_z <- X %*% mu_beta
+    sigma_z <- 1 + rowSums((X %*% chol(sigma_beta_q))^2)
+    Z <- pnorm(mu_z / sqrt(sigma_z)) # using probit link function
+
+    # M-step: update q(beta) based on current q(z_i)'s
+    # this involves updating the mean and covariance of q(beta)
+    sigma_beta_q_inv <- solve(sigma_beta) + t(X) %*% X
+    sigma_beta_q <- solve(sigma_beta_q_inv)
+    mu_beta <- sigma_beta_q %*% t(X) %*% (y - 0.5) # Update mean
+
+    # convergence check (based on change in mu_beta)
+    if (iter > 1 && max(abs(mu_beta - mu_beta_old)) < tol) {
+      break
+    }
+    mu_beta_old <- mu_beta
+  }
+
+  list(beta = mu_beta, sigma_beta = sigma_beta_q, iterations = iter)
+}
+```
+
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+set.seed(123)  # For reproducibility
+N <- 100       # Number of observations
+D <- 5         # Number of features
+
+# Generate random features
+X <- matrix(rnorm(N * D), ncol = D)
+
+# Generate a synthetic beta
+beta_true <- runif(D, -2, 2)
+
+# Generate latent variable Z and binary outcomes Y
+Z <- X %*% beta_true + rnorm(N)
+Y <- ifelse(Z > 0, 1, 0)
+
+results <- probitVB(X, Y, max.iter = 5000)
+print(results)
+```
+
+
+
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+probitVB <- function(X, y, max.iter = 1000, burn.in = 0) {
+  N <- nrow(X)          # number of observations
+  d <- ncol(X)          # dimensionality of beta
+  sigma_beta <- diag(d) # prior covariance matrix for beta, can be adjusted
+  xtx <- t(X) %*% X
+
+  # initialize q(beta) as a normal distribution (mean=0, covariance=sigma_beta)
+  mu_beta <- rep(0, d)
+  sigma_beta_q <- solve(xtx + sigma_beta)
+
+  # initialize storage for history
+  mu_beta_history <- matrix(NA, nrow = max.iter, ncol = d)
+  sigma_beta_q_history <- matrix(NA, nrow = max.iter, ncol = d)
+  Z <- matrix(nrow = max.iter, ncol = N)
+  E_z <- vector(mode = "numeric", length = N)
+
+  # main VB iteration loop
+  for (iter in 1:max.iter) {
+    # E-step: Update q(z_i)'s based on current q(beta)
+    mu_z <- X %*% mu_beta
+    E_z[y == 1] <- mu_z[y == 1] + dnorm(-mu_z[y == 1]) / (1 - pnorm(-mu_z[y == 1]))
+    E_z[y == 0] <- mu_z[y == 0] - dnorm(-mu_z[y == 0]) / pnorm(-mu_z[y == 0])
+    Z[iter, ] <- E_z
+    mu_beta <- sigma_beta_q %*% (t(X) %*% E_z)
+
+    # M-step: Update q(beta) based on current q(z_i)'s
+    sigma_beta_q_inv <- solve(sigma_beta) + xtx
+    sigma_beta_q <- solve(sigma_beta_q_inv)
+    mu_beta <- sigma_beta_q %*% (t(X) %*% E_z) # update mean
+
+    # store history
+    mu_beta_history[iter, ] <- mu_beta
+    sigma_beta_q_history[iter, ] <- sigma_beta_q
+    Z[iter, ] <- E_z
+
+  }
+
+  new_list <- list(
+    beta = mu_beta[burn.in:max.iter, ],
+    sigma_beta = sigma_beta_q[burn.in:max.iter, ],
+    iterations = max.iter,
+    sigma_beta_history = sigma_beta_q_history[burn.in:max.iter, ],
+    z_history = Z[burn.in:max.iter, ]
+  )
+
+  return(new_list)
+}
+
+```
+
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+set.seed(123)
+results <- probitVB(X, Y, max.iter = 5000)
+print(results)
+```
+
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+set.seed(123)
+X <- runif(100, -2, 2)
+X <- cbind(1, X)
+true_beta <- c(-0.6, 2.5)
+y <- rbinom(100, 1, pnorm(true_beta %*% t(X)))
+posterior.syn <- probitVB(X, y, max.iter = 5000)
+posterior.beta <- posterior.syn[[1]]
+p1 <- ggplot() + 
+  geom_point(aes(c(1:5000), posterior.beta[,1])) +
+  labs(x = "Iteration", y = "Values of Beta Parameters"
+  )
+p2 <- ggplot() + geom_point(aes(c(1:5000), posterior.beta[,2]))
+plot_grid(p1, p2, ncol = 2, nrow = 1)
+```
+
+
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+
+# Extract beta_history from the results
+beta_history <- results$beta_history
+
+# Number of parameters in beta
+num_params <- ncol(beta_history)
+
+# Create a plot
+plot(NULL, xlim = c(1, nrow(beta_history)), ylim = range(beta_history, na.rm = TRUE),
+     xlab = "Iteration", ylab = "Values of Beta Parameters", type = "n")
+
+# Add lines for each parameter
+colors <- rainbow(num_params)
+for (i in 1:num_params) {
+  lines(beta_history[, i], col = colors[i])
+}
+
+# Adding a legend to distinguish the parameters
+legend("topright", legend = paste0("Beta ", 1:num_params), col = colors, lty = 1, cex = 0.8)
+
+```
+
+```{r}
+
+
+```
+
+
