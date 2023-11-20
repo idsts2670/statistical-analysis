@@ -12,7 +12,6 @@ output:
 
 ```{r setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(
-  echo = TRUE,
   warning = FALSE,
   message = FALSE
 )
@@ -61,7 +60,7 @@ This is thus the probit model of Lecture 16-17. Write \( X \), \( Y \), and \( Z
 <br><br>
 
 ### Q1
-> Derive and write down the conditional distribution \( Z|X, Y, \beta \).
+> *Derive and write down the conditional distribution \( Z|X, Y, \beta \).*
 
 To derive the conditional distribution \( Z|X, Y, \beta \), we need to consider the nature of the probit model and the fact that \( Z \) is essentially a latent variable that informs the observed binary outcomes \( Y \). Given the setup, \( z_i \sim N(x_i \beta, 1) \) and \( y_i = 1(z_i > 0) \), the \( P(z_i|x_i,y_i,\beta) \) is as follows:
 
@@ -89,7 +88,7 @@ Therefore,
 <br><br>
 
 ### Q2
-> Derive and write down the conditional distribution \( P(\beta|X, Y, Z) \)
+> *Derive and write down the conditional distribution \( P(\beta|X, Y, Z) \)*
 
 Given the prior \( \beta \sim N(0, \Sigma_b) \), the likelihood from the probit model, and the augmentation with \( Z \), we can derive the conditional distribution \( P(\beta|X, Y, Z) \).
 
@@ -102,7 +101,7 @@ The likelihood part of the posterior is proportional to \( \exp\left(-\frac{1}{2
 \end{align*}
 
 ### Q3
-> Describe the overall Gibbs sampling algorithm, and how you would calculate the posterior mean and covariance of \(\beta \).
+> *Describe the overall Gibbs sampling algorithm, and how you would calculate the posterior mean and covariance of \(\beta \).*
 
 The Gibbs sampling algorithm involves iteratively sampling from the conditional distributions:
 
@@ -114,12 +113,13 @@ The Gibbs sampling algorithm involves iteratively sampling from the conditional 
 After a burn-in period, the samples of \( \beta \) can be used to approximate the posterior distribution.
 
 We can estimate the posterior mean and covariance of \( \beta \) as follows:
+
 - Posterior Mean of \( \beta \): This can be estimated by taking the average of the \( \beta \) samples after burn-in.
 - Posterior Covariance of \( \beta \): This can be estimated by calculating the sample covariance of the \( \beta \) samples after burn-in.
 
 
 ### Q4.
-> Write an R function to implement the VB algorithm for the probit model. This should accept as input a dataset (X, Y) and return the approximations to the posterior distributions over \( \beta \) and the z's. Recall how the algorithm proceeds: start with some arbitrary initial distribution q(\( \beta \)) over \( \beta \), use that to calculate the q(zi)'s, use those to calculate q(\( \beta \)), and repeat till these distributions stop changing.
+> *Write an R function to implement the VB algorithm for the probit model. This should accept as input a dataset (X, Y) and return the approximations to the posterior distributions over \( \beta \) and the z's. Recall how the algorithm proceeds: start with some arbitrary initial distribution q(\( \beta \)) over \( \beta \), use that to calculate the q(zi)'s, use those to calculate q(\( \beta \)), and repeat till these distributions stop changing.*
 
 In this section, we'll implement the Variational Bayes (VB) algorithm for the probit model, as discussed in Lectures 16-17. The function `probitVB` will be designed to work as follows:
 
@@ -138,7 +138,7 @@ we use the approximation that \( P(\beta, z | X, y) \approx q(z)q(\beta) \)
 
 The iteration continues until the changes in the distributions become negligibly small, indicating convergence.
 
-```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=70)}
 
 probitVB <- function(X, y, sigma_beta, max.iter = 1000, burn.in = 0) {
   N <- nrow(X)          # number of observations
@@ -171,12 +171,7 @@ probitVB <- function(X, y, sigma_beta, max.iter = 1000, burn.in = 0) {
     Z[iter, ] <- E_z
   }
 
-  new_list <- list(
-    beta = mu_beta_history[burn.in:max.iter, ],
-    z_history = Z[burn.in:max.iter, ],
-    sigma_beta = sigma_beta_q,
-    iterations = max.iter
-  )
+  new_list <- list(beta = mu_beta_history[burn.in:max.iter, ], z_history = Z[burn.in:max.iter, ], sigma_beta = sigma_beta_q, iterations = max.iter)
 
   return(new_list)
 }
@@ -193,20 +188,17 @@ posterior_beta <- probitVB(X, y, sigma_beta=diag(ncol(X)), max.iter=5000)[[1]]
 ```
 
 We can see the posterior mean converges quickly. Yet it is a bit short to the true value of \( \beta \).
-```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80), fig.show="hold", out.width="80%"}
-
+```{r}
 p1 <- ggplot() + 
-  geom_point(aes(c(1:5000), posterior_beta[,1])) +
-  labs(x = "Iteration", y = "Values of Beta[0] Parameters") +
-  ggtitle("posterior mean") +
+  geom_point(aes(c(1:5000), posterior_beta[,1])) + 
+  labs(x = "Iteration", y = "Values of Beta[0] Parameters") + 
+  ggtitle("posterior mean") + 
   geom_hline(yintercept = true_beta[1], color = "#403f3f", linetype = "dashed")
-
 p2 <- ggplot() + 
-  geom_point(aes(c(1:5000), posterior_beta[,2])) +
-  labs(x = "Iteration", y = "Values of Beta[1] Parameters") +
-  ggtitle("posterior mean") +
+  geom_point(aes(c(1:5000), posterior_beta[,2])) + 
+  labs(x = "Iteration", y = "Values of Beta[1] Parameters") + 
+  ggtitle("posterior mean") + 
   geom_hline(yintercept = true_beta[2], color = "#403f3f", linetype = "dashed")
-
 plot_grid(p1, p2, ncol = 2, nrow = 1)
 ```
 
@@ -221,9 +213,11 @@ plot_grid(p1, p2, ncol = 2, nrow = 1)
 An experiment was conducted to study the effects of computer-generated reminders on preventive care. Physicians (specifically, residents and faculty members on the staff of a general medicine clinic) were randomly assigned to either a treatment or control group. The treatment in this experiment is a reminder sent to physicians that encouraged them to inoculate their patients at risk for the flu. The question of interest here is whether the computer-generated reminder increases the likelihood that a patient will be vaccinated.
 Your task is to use a probit regression model to learn about the effect of the treatment on patient vaccination, accounting for patient characteristics that may be associated with the response. The observed data is contained in flu data.txt, and consists of the following variables for each of the 2901 patients.
 
-```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+```{r echo=FALSE}
 df <- read.csv("/Users/satoshiido/Documents/programming/statistical-analysis/656/hw/hw4/flu_data.txt", sep = " ")
+```
 
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=90)}
 # preprocess the data
 df <- subset(df, age != ".")
 df$age <- as.numeric(df$age) %>% scale()
@@ -238,15 +232,15 @@ head(X)
 ```
 
 ### Q2
-> Apply your function from the previous question on the data provided in flu_data.txt. Describe how you initialized the algorithm, the number of iterations that you ran it for, and your selected convergence criterion. Plot the approximation to the posterior distribution over \( \beta \) as well as a few of the zi's. Based on your posterior approximation, what do you conclude about the effect of the treatment on patient vaccination?
+> *Apply your function from the previous question on the data provided in flu_data.txt. Describe how you initialized the algorithm, the number of iterations that you ran it for, and your selected convergence criterion. Plot the approximation to the posterior distribution over \( \beta \) as well as a few of the zi's. Based on your posterior approximation, what do you conclude about the effect of the treatment on patient vaccination?*
 
 Due to limited prior knowledge, we use a weakly informative normal prior with mean 0 and variance 10 for \( \beta \). Initially, the full first order model was fit to the data using Variational Bayes. The convergence tolerance was set to 0.1.
-Therefore, \( \mu_\beta \) and \( \mu_z \) were both initially set to vectors of zeros of appropriate dimension. The convergence criterion is the sum of change in parameter less than specified torlarence.
-```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+Therefore, \( \mu_\beta \) and \( \mu_z \) were both initially set to vectors of zeros of appropriate dimension. The iteration is set to be 5000, and the convergence criterion is the sum of change in parameter less than specified torlarence.
+```{r}
 d <- ncol(X)
 N <- nrow(X)
 Sigma_beta <- diag(10, nrow = d)
-posterior_flu <- probitVB(X, y, Sigma_beta, max.iter = 5000)
+posterior_flu <- probitVB(X, y, sigma_beta=Sigma_beta, max.iter=5000)
 posterior_flu_beta <- posterior_flu[[1]]
 predict_flu <- data.frame(
   "beta1" = posterior_flu_beta[c(5000),][1],
@@ -259,67 +253,192 @@ predict_flu <- data.frame(
 )
 ```
 
-```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80), fig.show="hold", out.width="80%"}
+```{r fig.show="hold", out.width="90%"}
+
 ptreat <- ggplot() +
   geom_point(aes(c(1:5000), posterior_flu_beta[, 1])) +
-  labs(x = "Iteration", y = "Values of Beta[0] Parameters") +
-  ggtitle("posterior mean") +
-  geom_hline(yintercept = 0, color = "#403f3f", linetype = "dashed")
+  labs(x = "Iteration", y = "Values of Beta[1] Parameters") +
+  ggtitle("posterior mean of beta for treatment") +
+  geom_hline(yintercept = 0, color = "#403f3f", linetype = "dashed") +
+  theme(axis.title.y = element_text(size = 8),
+    axis.title.x = element_text(size = 8),
+    plot.title = element_text(size = 10))
+
+page <- ggplot() +
+  geom_point(aes(c(1:5000), posterior_flu_beta[, 2])) +
+  labs(x = "Iteration", y = "Values of Beta[2] Parameters") +
+  ggtitle("posterior mean of beta for age") +
+  geom_hline(yintercept = 0, color = "#403f3f", linetype = "dashed") +
+  theme(axis.title.y = element_text(size = 8),
+    axis.title.x = element_text(size = 8),
+    plot.title = element_text(size = 10))
+
+pcopd <- ggplot() +
+  geom_point(aes(c(1:5000), posterior_flu_beta[, 3])) +
+  labs(x = "Iteration", y = "Values of Beta[3] Parameters") +
+  ggtitle("posterior mean of beta for copd") +
+  geom_hline(yintercept = 0, color = "#403f3f", linetype = "dashed") +
+  theme(axis.title.y = element_text(size = 8),
+    axis.title.x = element_text(size = 8),
+    plot.title = element_text(size = 10))
+
+phearted <- ggplot() +
+  geom_point(aes(c(1:5000), posterior_flu_beta[, 4])) +
+  labs(x = "Iteration", y = "Values of Beta[4] Parameters") +
+  ggtitle("posterior mean of beta for hearted") +
+  geom_hline(yintercept = 0, color = "#403f3f", linetype = "dashed") +
+  theme(axis.title.y = element_text(size = 8),
+    axis.title.x = element_text(size = 8),
+    plot.title = element_text(size = 10))
+
+prenal <- ggplot() +
+  geom_point(aes(c(1:5000), posterior_flu_beta[, 5])) +
+  labs(x = "Iteration", y = "Values of Beta[5] Parameters") +
+  ggtitle("posterior mean of beta for renal") +
+  geom_hline(yintercept = 0, color = "#403f3f", linetype = "dashed") +
+  theme(axis.title.y = element_text(size = 8),
+    axis.title.x = element_text(size = 8),
+    plot.title = element_text(size = 10))
+
+pliverd <- ggplot() +
+  geom_point(aes(c(1:5000), posterior_flu_beta[, 6])) +
+  labs(x = "Iteration", y = "Values of Beta[6] Parameters") +
+  ggtitle("posterior mean of beta for liverd") +
+  geom_hline(yintercept = 0, color = "#403f3f", linetype = "dashed") +
+  theme(axis.title.y = element_text(size = 8),
+    axis.title.x = element_text(size = 8),
+    plot.title = element_text(size = 10))
+
+plot_grid(ptreat, page, pcopd, phearted, prenal, pliverd, ncol = 2, nrow = 3, 
+  byrow = TRUE)
 ```
 
+Posterior plot for \( z_j \), where \( j \) random number selecting from 1 to 2500
+```{r fig.show="hold", out.width="90%"}
+rd_z <- sample(2500, 4)
+posterior_flu_z <- posterior_flu[[2]]
+rd_posterior_z <- posterior_flu_z[, rd_z]
+
+pz1 <- ggplot() +
+  geom_point(aes(c(1:5000), rd_posterior_z[, 1])) +
+  labs(x = "Iteration", y = "Values of Z[1] Parameters") +
+  ggtitle("posterior mean of z1") +
+  geom_hline(yintercept = 0, color = "#403f3f", linetype = "dashed") +
+  theme(axis.title.y = element_text(size = 8),
+        axis.title.x = element_text(size = 8),
+        plot.title = element_text(size = 10))
+
+pz2 <- ggplot() +
+  geom_point(aes(c(1:5000), rd_posterior_z[, 2])) +
+  labs(x = "Iteration", y = "Values of Z[2] Parameters") +
+  ggtitle("posterior mean of z2") +
+  geom_hline(yintercept = 0, color = "#403f3f", linetype = "dashed") +
+  theme(axis.title.y = element_text(size = 8),
+        axis.title.x = element_text(size = 8),
+        plot.title = element_text(size = 10))
+
+pz3 <- ggplot() +
+  geom_point(aes(c(1:5000), rd_posterior_z[, 3])) +
+  labs(x = "Iteration", y = "Values of Z[3] Parameters") +
+  ggtitle("posterior mean of z3") +
+  geom_hline(yintercept = 0, color = "#403f3f", linetype = "dashed") +
+  theme(axis.title.y = element_text(size = 8),
+        axis.title.x = element_text(size = 8),
+        plot.title = element_text(size = 10))
+```
+
+According to the plot, both \( \beta \) and \( z \) converge through the iteration. As we see from the \( \beta \)-plot, the expected coefficient of treatment \( E(\beta \) treatment) ~ 0.24. Therefore, we can assume treatment has a positive effect on whether the patient gets vaccinated.
+In the plot, we observe that both \( \beta \) and \( z \) achieve convergence as the iteration progresses. The plot for \( \beta \) reveals that the anticipated coefficient for the treatment, denoted as \( E(\beta_{\text{treatment}}) \), is approximately 0.24. This suggests that the treatment positively influences the likelihood of patients getting vaccinated.
 
 ### Q3
-> Implement the probit model in Stan, and produce an MCMC approximation to the posterior. Treating these as the truth (recall MCMC becomes arbitrarily accurate with increasing number of samples), comment on your variational approximation deviates from the true posterior distribution.
+> *Implement the probit model in Stan, and produce an MCMC approximation to the posterior. Treating these as the truth (recall MCMC becomes arbitrarily accurate with increasing number of samples), comment on your variational approximation deviates from the true posterior distribution.*
 
-The Stan code is as below:
 ```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
 probit_code = "
-  data {
-    int <lower=0> N;
-    int <lower=0> K;
-    matrix[K, K] pr_sd;
-    matrix[N, K] x;
-    int <lower=0, upper=1> y[N];
-  }
-  parameters {
-    vector[K] beta;
-  }
-  transformed parameters {
-    vector[N] mu = x*beta;
-    vector[N] cd;
-  // Number of observations
-  // Number of predictors
-  // Prior standard deviation
-  // Design matrix
-  // Response vector
-  // Coefficients for predictors
+data {
+  int <lower=0> N; // number of observations
+  int <lower=0> K; // number of predictors
+  matrix[K, K] pr_sd; // prior standard deviation
+  matrix[N, K] x; // design matrix
+  int <lower=0, upper=1> y[N]; // response vector
+}
+parameters {
+  vector[K] beta; // coefficients for predictors
+}
+transformed parameters {
+  vector[N] mu = x*beta; // linear predictor
+  vector[N] cd;
     for (i in 1:N) {
-      cd[i] = normal_cdf(mu[i], 0, 1);
-    }
-  }
-  model {
-    vector[K] mu0 = rep_vector(0, K);
-    beta ~ multi_normal(mu0, pr_sd);
-    y ~ bernoulli(cd);
-  }
-  generated quantities {
-    int<lower=0> y_rep[N];
-    y_rep = bernoulli_rng(cd);
-  } "
-probit <- stan_model(model_code = probit_code)
+      cd[i] = normal_cdf(mu[i], 0, 1); // CDF of normal distribution
+} }
+model {
+  vector[K] mu0 = rep_vector(0, K); // prior mean
+  beta ~ multi_normal(mu0, pr_sd); // prior
+  y ~ bernoulli(cd); // likelihood
+}
+generated quantities {
+  int<lower=0> y_rep[N]; 
+  y_rep = bernoulli_rng(cd);
+} "
+probit_model <- stan_model(model_code = probit_code)
 ```
 
-We draw 9000 samples from the approximated posterior using MCMC sampling with a burn-in period of 1000 iterations.
-```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80), echo=FALSE}
-ata = list(N = nrow(X), K = ncol(X), pr_sd = Sigma_b, x = X, y = Y)
-nfit_probit <- sampling(probit, data = reg_data, iter = 10000, warmup = 1000, chains = 1)
+We draw 8000 samples from the approximated posterior using MCMC sampling with 2000 burn-in periods.
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+reg_data <- list(N=nrow(X), K=ncol(X), pr_sd = Sigma_beta, x=X, y=y)
+nfit_probit <- sampling(probit_model, data=reg_data, iter=10000, warmup=2000, chains=1)
+```
+
+For future use, we save the result as a data frame.
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+post_smp_probit <- as.data.frame(nfit_probit)
+colnames(post_smp_probit)[1:7] <- c("beta1", "beta2", "beta3", "beta4", "beta5", "beta6", "beta7")
+```
+
+Now, we can plot MCMC and Variational Bayes results together.
+```{r}
+par(mfrow = c(3, 3))
+options(repr.plot.width = 10, repr.plot.height = 10)
+par(mar = c(4, 4, 2, 2) + 0.1)
+
+for (i in 1:7){
+  mean_beta_vb <- mean(posterior_flu$beta[, i])
+  sd_beta_vb <- sqrt(mean(posterior_flu$sigma_beta[i, i]))
+  
+  beta <- seq(
+    mean_beta_vb - 4 * sd_beta_vb,
+    mean_beta_vb + 4 * sd_beta_vb, 
+    length.out = 1000)
+  
+  p_vb <- dnorm(
+    beta,
+    mean = mean_beta_vb,
+    sd = sd_beta_vb)
+  
+  plot(beta, p_vb, type = "l", lwd = 2, col = "blue", 
+    xlab = "beta", ylab = "density", main = paste("beta", i)
+    )
+  
+  mean_beta_mcmc <- mean(post_smp_probit[, i])
+  sd_beta_mcmc <- sd(post_smp_probit[, i])
+  
+  lines(beta, dnorm(beta, mean = mean_beta_mcmc, sd = sd_beta_mcmc), 
+    col = "red", lwd = 2
+    )
+  
+  legend("topright", legend = c("VB", "MCMC"), 
+    col = c("blue", "red"), lwd = 2, cex = 0.8
+    )
+}
 
 ```
+
+As we can see from the plots, the MCMC and VB results are very similar. The MCMC results are slightly more spread out than the VB results, but the difference is not significant. This is likely due to the fact that the prior is weakly informative, and the posterior is not very sensitive to the prior. Overall, the VB works well in approximating the posterior.
 
 ### Q4
-> 
+> *Implement the logistic regression model in Stan, and produce an MCMC approximation to the posterior. Comment on any difference between this as the results from the probit model.*
 
-```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80), echo=FALSE}
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
 logistic_code = "
 data {
   int <lower=0> N; // number of observations
@@ -336,8 +455,8 @@ transformed parameters {
 }
 model {
   vector[K] mu0 = rep_vector(0, K); // prior mean
-  beta ~ multi_normal(mu0, pr_sd); // prior
-  y ~ bernoulli_logit(mu); // Likelihood
+  beta ~ multi_normal(mu0, pr_sd);  // prior
+  y ~ bernoulli_logit(mu); // likelihood
 }
 generated quantities {
   int<lower=0, upper=1> y_rep[N];
@@ -345,3 +464,60 @@ generated quantities {
 } "
 logistic = stan_model(model_code = logistic_code)
 ```
+
+We draw 8000 samples from the approximated posterior using MCMC sampling with 2000 burn-in periods.
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+nfit_logistic = sampling(logistic, data=reg_data, iter=10000, warmup=2000, chains=1)
+```
+
+For future use, we save this result as a data frame as well.
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+post_smp_logistic = as.data.frame(nfit_logistic)
+colnames(post_smp_logistic)[1:7] <- colnames(post_smp_probit)[1:7]
+```
+
+```{r}
+par(mfrow = c(3, 3))
+options(repr.plot.width = 10, repr.plot.height = 10)
+par(mar = c(4, 4, 2, 2) + 0.1)
+
+for (i in 1:7){
+  mean_beta_vb <- mean(posterior_flu$beta[, i])
+  sd_beta_vb <- sqrt(mean(posterior_flu$sigma_beta[i, i]))
+  
+  beta <- seq(
+    mean_beta_vb - 4 * sd_beta_vb,
+    mean_beta_vb + 4 * sd_beta_vb, 
+    length.out = 1000)
+  
+  p_vb <- dnorm(
+    beta,
+    mean = mean_beta_vb,
+    sd = sd_beta_vb)
+  
+  plot(beta, p_vb,
+    type = "l",
+    lwd = 2,
+    col = "blue",
+    xlab = "beta",
+    ylab = "density",
+    main = paste("beta", i))
+  
+  mean_beta_mcmc <- mean(post_smp_logistic[, i])
+  sd_beta_mcmc <- sd(post_smp_logistic[, i])
+  
+  lines(beta, dnorm(beta, 
+    mean = mean_beta_mcmc,
+    sd = sd_beta_mcmc),
+    col = "red", lwd = 2)
+  
+  legend("topright", legend = c("VB", "MCMC"), 
+    col = c("blue", "red"), lwd = 2, cex = 0.8
+  )
+}
+
+```
+
+Compared to probit model, the logistic model has more uncertainty on all these parameter. From the plots, we can see the VB method and MCMC method shows very different patterns among some variables such as beta1, beta2, beta3, and beta4. beta5 and beta6 have the close mean and different variances.
+The Probit model uses the normal cumulative distribution function, whereas the logistic model uses the logistic function. This can lead to differences in coefficient estimates.
+Yet, the choice between Logistic Regression and Probit models does not affect the regression analysis conclusions, only the interpretations.
