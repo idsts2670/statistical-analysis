@@ -139,71 +139,16 @@ we use the approximation that \( P(\beta, z | X, y) \approx q(z)q(\beta) \)
 The iteration continues until the changes in the distributions become negligibly small, indicating convergence.
 
 ```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
-probitVB <- function(X, y, max.iter, tol = 1e-6) {
+
+probitVB <- function(X, y, sigma_beta, max.iter = 1000, burn.in = 0) {
   N <- nrow(X)          # number of observations
   d <- ncol(X)          # dimensionality of beta
-  sigma_beta <- diag(d) # prior covariance matrix for beta, can be adjusted
-
-  # initialize q(beta) as a normal distribution where mean=0, covariance=sigma_beta
-  mu_beta <- rep(0, d)
-  sigma_beta_q <- sigma_beta
-
-  # main VB iteration loop
-  for (iter in 1:max.iter) {
-    # E-step: update q(z_i)'s based on current q(beta)
-    mu_z <- X %*% mu_beta
-    sigma_z <- 1 + rowSums((X %*% chol(sigma_beta_q))^2)
-    Z <- pnorm(mu_z / sqrt(sigma_z)) # using probit link function
-
-    # M-step: update q(beta) based on current q(z_i)'s
-    # this involves updating the mean and covariance of q(beta)
-    sigma_beta_q_inv <- solve(sigma_beta) + t(X) %*% X
-    sigma_beta_q <- solve(sigma_beta_q_inv)
-    mu_beta <- sigma_beta_q %*% t(X) %*% (y - 0.5) # Update mean
-
-    # convergence check (based on change in mu_beta)
-    if (iter > 1 && max(abs(mu_beta - mu_beta_old)) < tol) {
-      break
-    }
-    mu_beta_old <- mu_beta
-  }
-
-  list(beta = mu_beta, sigma_beta = sigma_beta_q, iterations = iter)
-}
-```
-
-```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
-set.seed(123)  # For reproducibility
-N <- 100       # Number of observations
-D <- 5         # Number of features
-
-# Generate random features
-X <- matrix(rnorm(N * D), ncol = D)
-
-# Generate a synthetic beta
-beta_true <- runif(D, -2, 2)
-
-# Generate latent variable Z and binary outcomes Y
-Z <- X %*% beta_true + rnorm(N)
-Y <- ifelse(Z > 0, 1, 0)
-
-results <- probitVB(X, Y, max.iter = 5000)
-print(results)
-```
-
-
-
-```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
-
-probitVB <- function(X, y, max.iter = 1000, burn.in = 0) {
-  N <- nrow(X)          # number of observations
-  d <- ncol(X)          # dimensionality of beta
-  sigma_beta <- diag(d) # prior covariance matrix for beta, can be adjusted
+  # sigma_beta <- diag(d) # prior covariance matrix for beta, can be adjusted
   xtx <- t(X) %*% X
 
   # initialize q(beta) as a normal distribution (mean=0, covariance=sigma_beta)
   mu_beta <- rep(0, d)
-  sigma_beta_q <- solve(xtx + sigma_beta)
+  sigma_beta_q <- solve(xtx + solve(sigma_beta))
 
   # initialize storage for history
   mu_beta_history <- matrix(NA, nrow = max.iter, ncol = d)
@@ -238,20 +183,17 @@ probitVB <- function(X, y, max.iter = 1000, burn.in = 0) {
 
 ```
 
-```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
-set.seed(123)
-results <- probitVB(X, Y, max.iter = 5000)
-print(results)
-```
-
-We can see the posterior mean converges quickly. Yet it is a bit short to the true value of \( \beta \).
-```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+```{r echo=FALSE, tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
 set.seed(123)
 X <- runif(100, -2, 2)
 X <- cbind(1, X)
 true_beta <- c(-0.6, 2.5)
 y <- rbinom(100, 1, pnorm(true_beta %*% t(X)))
-posterior_beta <- probitVB(X, y, max.iter = 5000)[[1]]
+posterior_beta <- probitVB(X, y, sigma_beta=diag(ncol(X)), max.iter=5000)[[1]]
+```
+
+We can see the posterior mean converges quickly. Yet it is a bit short to the true value of \( \beta \).
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80), fig.show="hold", out.width="80%"}
 
 p1 <- ggplot() + 
   geom_point(aes(c(1:5000), posterior_beta[,1])) +
@@ -268,3 +210,138 @@ p2 <- ggplot() +
 plot_grid(p1, p2, ncol = 2, nrow = 1)
 ```
 
+<br><br>
+
+<center>
+# Effect of computer-generated reminders
+</center>
+
+<br><br>
+
+An experiment was conducted to study the effects of computer-generated reminders on preventive care. Physicians (specifically, residents and faculty members on the staff of a general medicine clinic) were randomly assigned to either a treatment or control group. The treatment in this experiment is a reminder sent to physicians that encouraged them to inoculate their patients at risk for the flu. The question of interest here is whether the computer-generated reminder increases the likelihood that a patient will be vaccinated.
+Your task is to use a probit regression model to learn about the effect of the treatment on patient vaccination, accounting for patient characteristics that may be associated with the response. The observed data is contained in flu data.txt, and consists of the following variables for each of the 2901 patients.
+
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+df <- read.csv("/Users/satoshiido/Documents/programming/statistical-analysis/656/hw/hw4/flu_data.txt", sep = " ")
+
+# preprocess the data
+df <- subset(df, age != ".")
+df$age <- as.numeric(df$age) %>% scale()
+
+y <- df$vaccinated
+X <- df %>% 
+  dplyr::select(-vaccinated) %>%
+  as.matrix() %>%
+  cbind(1, .)
+colnames(X)[1] <- "intercept"
+head(X)
+```
+
+### Q2
+> Apply your function from the previous question on the data provided in flu_data.txt. Describe how you initialized the algorithm, the number of iterations that you ran it for, and your selected convergence criterion. Plot the approximation to the posterior distribution over \( \beta \) as well as a few of the zi's. Based on your posterior approximation, what do you conclude about the effect of the treatment on patient vaccination?
+
+Due to limited prior knowledge, we use a weakly informative normal prior with mean 0 and variance 10 for \( \beta \). Initially, the full first order model was fit to the data using Variational Bayes. The convergence tolerance was set to 0.1.
+Therefore, \( \mu_\beta \) and \( \mu_z \) were both initially set to vectors of zeros of appropriate dimension. The convergence criterion is the sum of change in parameter less than specified torlarence.
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+d <- ncol(X)
+N <- nrow(X)
+Sigma_beta <- diag(10, nrow = d)
+posterior_flu <- probitVB(X, y, Sigma_beta, max.iter = 5000)
+posterior_flu_beta <- posterior_flu[[1]]
+predict_flu <- data.frame(
+  "beta1" = posterior_flu_beta[c(5000),][1],
+  "beta2" = posterior_flu_beta[c(5000),][2],
+  "beta3" = posterior_flu_beta[c(5000),][3],
+  "beta4" = posterior_flu_beta[c(5000),][4],
+  "beta5" = posterior_flu_beta[c(5000),][5],
+  "beta6" = posterior_flu_beta[c(5000),][6],
+  "beta7" = posterior_flu_beta[c(5000),][7]
+)
+```
+
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80), fig.show="hold", out.width="80%"}
+ptreat <- ggplot() +
+  geom_point(aes(c(1:5000), posterior_flu_beta[, 1])) +
+  labs(x = "Iteration", y = "Values of Beta[0] Parameters") +
+  ggtitle("posterior mean") +
+  geom_hline(yintercept = 0, color = "#403f3f", linetype = "dashed")
+```
+
+
+### Q3
+> Implement the probit model in Stan, and produce an MCMC approximation to the posterior. Treating these as the truth (recall MCMC becomes arbitrarily accurate with increasing number of samples), comment on your variational approximation deviates from the true posterior distribution.
+
+The Stan code is as below:
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+probit_code = "
+  data {
+    int <lower=0> N;
+    int <lower=0> K;
+    matrix[K, K] pr_sd;
+    matrix[N, K] x;
+    int <lower=0, upper=1> y[N];
+  }
+  parameters {
+    vector[K] beta;
+  }
+  transformed parameters {
+    vector[N] mu = x*beta;
+    vector[N] cd;
+  // Number of observations
+  // Number of predictors
+  // Prior standard deviation
+  // Design matrix
+  // Response vector
+  // Coefficients for predictors
+    for (i in 1:N) {
+      cd[i] = normal_cdf(mu[i], 0, 1);
+    }
+  }
+  model {
+    vector[K] mu0 = rep_vector(0, K);
+    beta ~ multi_normal(mu0, pr_sd);
+    y ~ bernoulli(cd);
+  }
+  generated quantities {
+    int<lower=0> y_rep[N];
+    y_rep = bernoulli_rng(cd);
+  } "
+probit <- stan_model(model_code = probit_code)
+```
+
+We draw 9000 samples from the approximated posterior using MCMC sampling with a burn-in period of 1000 iterations.
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80), echo=FALSE}
+ata = list(N = nrow(X), K = ncol(X), pr_sd = Sigma_b, x = X, y = Y)
+nfit_probit <- sampling(probit, data = reg_data, iter = 10000, warmup = 1000, chains = 1)
+
+```
+
+### Q4
+> 
+
+```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80), echo=FALSE}
+logistic_code = "
+data {
+  int <lower=0> N; // number of observations
+  int <lower=0> K; // number of predictors
+  matrix[K, K] pr_sd; // prior standard deviation
+  matrix[N, K] x; // design matrix
+  int <lower=0, upper=1> y[N]; // response vector
+}
+parameters {
+  vector[K] beta; // coefficients for predictors
+}
+transformed parameters {
+  vector[N] mu = x*beta; // linear predictor
+}
+model {
+  vector[K] mu0 = rep_vector(0, K); // prior mean
+  beta ~ multi_normal(mu0, pr_sd); // prior
+  y ~ bernoulli_logit(mu); // Likelihood
+}
+generated quantities {
+  int<lower=0, upper=1> y_rep[N];
+  y_rep = bernoulli_logit_rng(mu);
+} "
+logistic = stan_model(model_code = logistic_code)
+```
