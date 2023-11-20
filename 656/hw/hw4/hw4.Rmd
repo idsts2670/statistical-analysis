@@ -194,6 +194,7 @@ print(results)
 
 
 ```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
+
 probitVB <- function(X, y, max.iter = 1000, burn.in = 0) {
   N <- nrow(X)          # number of observations
   d <- ncol(X)          # dimensionality of beta
@@ -206,37 +207,30 @@ probitVB <- function(X, y, max.iter = 1000, burn.in = 0) {
 
   # initialize storage for history
   mu_beta_history <- matrix(NA, nrow = max.iter, ncol = d)
-  sigma_beta_q_history <- matrix(NA, nrow = max.iter, ncol = d)
-  Z <- matrix(nrow = max.iter, ncol = N)
   E_z <- vector(mode = "numeric", length = N)
+  Z <- matrix(nrow = max.iter, ncol = N)
 
   # main VB iteration loop
   for (iter in 1:max.iter) {
-    # E-step: Update q(z_i)'s based on current q(beta)
+    # E-step: update q(z_i)'s based on current q(beta)
     mu_z <- X %*% mu_beta
     E_z[y == 1] <- mu_z[y == 1] + dnorm(-mu_z[y == 1]) / (1 - pnorm(-mu_z[y == 1]))
     E_z[y == 0] <- mu_z[y == 0] - dnorm(-mu_z[y == 0]) / pnorm(-mu_z[y == 0])
     Z[iter, ] <- E_z
-    mu_beta <- sigma_beta_q %*% (t(X) %*% E_z)
 
-    # M-step: Update q(beta) based on current q(z_i)'s
-    sigma_beta_q_inv <- solve(sigma_beta) + xtx
-    sigma_beta_q <- solve(sigma_beta_q_inv)
+    # M-step: update q(beta) based on current q(z_i)'s
     mu_beta <- sigma_beta_q %*% (t(X) %*% E_z) # update mean
 
     # store history
     mu_beta_history[iter, ] <- mu_beta
-    sigma_beta_q_history[iter, ] <- sigma_beta_q
     Z[iter, ] <- E_z
-
   }
 
   new_list <- list(
-    beta = mu_beta[burn.in:max.iter, ],
-    sigma_beta = sigma_beta_q[burn.in:max.iter, ],
-    iterations = max.iter,
-    sigma_beta_history = sigma_beta_q_history[burn.in:max.iter, ],
-    z_history = Z[burn.in:max.iter, ]
+    beta = mu_beta_history[burn.in:max.iter, ],
+    z_history = Z[burn.in:max.iter, ],
+    sigma_beta = sigma_beta_q,
+    iterations = max.iter
   )
 
   return(new_list)
@@ -250,49 +244,27 @@ results <- probitVB(X, Y, max.iter = 5000)
 print(results)
 ```
 
+We can see the posterior mean converges quickly. Yet it is a bit short to the true value of \( \beta \).
 ```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
 set.seed(123)
 X <- runif(100, -2, 2)
 X <- cbind(1, X)
 true_beta <- c(-0.6, 2.5)
 y <- rbinom(100, 1, pnorm(true_beta %*% t(X)))
-posterior.syn <- probitVB(X, y, max.iter = 5000)
-posterior.beta <- posterior.syn[[1]]
+posterior_beta <- probitVB(X, y, max.iter = 5000)[[1]]
+
 p1 <- ggplot() + 
-  geom_point(aes(c(1:5000), posterior.beta[,1])) +
-  labs(x = "Iteration", y = "Values of Beta Parameters"
-  )
-p2 <- ggplot() + geom_point(aes(c(1:5000), posterior.beta[,2]))
+  geom_point(aes(c(1:5000), posterior_beta[,1])) +
+  labs(x = "Iteration", y = "Values of Beta[0] Parameters") +
+  ggtitle("posterior mean") +
+  geom_hline(yintercept = true_beta[1], color = "#403f3f", linetype = "dashed")
+
+p2 <- ggplot() + 
+  geom_point(aes(c(1:5000), posterior_beta[,2])) +
+  labs(x = "Iteration", y = "Values of Beta[1] Parameters") +
+  ggtitle("posterior mean") +
+  geom_hline(yintercept = true_beta[2], color = "#403f3f", linetype = "dashed")
+
 plot_grid(p1, p2, ncol = 2, nrow = 1)
 ```
-
-
-```{r tidy=TRUE, tidy.opts=list(indent=2, width.cutoff=80)}
-
-# Extract beta_history from the results
-beta_history <- results$beta_history
-
-# Number of parameters in beta
-num_params <- ncol(beta_history)
-
-# Create a plot
-plot(NULL, xlim = c(1, nrow(beta_history)), ylim = range(beta_history, na.rm = TRUE),
-     xlab = "Iteration", ylab = "Values of Beta Parameters", type = "n")
-
-# Add lines for each parameter
-colors <- rainbow(num_params)
-for (i in 1:num_params) {
-  lines(beta_history[, i], col = colors[i])
-}
-
-# Adding a legend to distinguish the parameters
-legend("topright", legend = paste0("Beta ", 1:num_params), col = colors, lty = 1, cex = 0.8)
-
-```
-
-```{r}
-
-
-```
-
 
