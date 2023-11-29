@@ -197,4 +197,5 @@ s1 %*% cc$xcoef
 s2 <- diag(sqrt(diag(cov(pulp))))
 s2 %*% cc$ycoef
 
+
 cancorPlus(paper, pulp, xcenter = TRUE, ycenter = TRUE, useCCApackage = TRUE)
