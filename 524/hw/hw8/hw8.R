@@ -42,13 +42,13 @@ t(mu1) %*% solve(s1) - t(mu2) %*% solve(s2)
 
 k = 0.5 * log(det(s1) / det(s2)) + 0.5 * (t(mu1) %*% solve(s1) %*% mu1 - t(mu2) %*% solve(s2) %*% mu2)
 
-"""
-  prediction <- apply(newdata, 1, function(y) 
-    d2.y1 <- (y - g1.means) %*% solve(g1.covar) %*% (y - g1.means)
-    d2.y2 <- (y - g2.means) %*% solve(g2.covar) %*% (y - g2.means)
-    ifelse(d2.y1^2 > d2.y2^2, 1, 0)
-  })
-"""
+
+  # prediction <- apply(newdata, 1, function(y) 
+  #   d2.y1 <- (y - g1.means) %*% solve(g1.covar) %*% (y - g1.means)
+  #   d2.y2 <- (y - g2.means) %*% solve(g2.covar) %*% (y - g2.means)
+  #   ifelse(d2.y1^2 > d2.y2^2, 1, 0)
+  # })
+
 
 two.group.quadratic.classification <- function(data, grouping, newdata) {
   dat.split <- split(data, grouping)
