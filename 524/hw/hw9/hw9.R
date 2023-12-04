@@ -3,9 +3,13 @@ library("stats")
 library("tidyverse")
 library("ggplot2")
 library("MASS")
+library("cluster")
+
+# path setup
+current_note_path <- getwd()
+main_path <- file.path(current_note_path, "524/hw")
 
 # 12.7
-
 (m2 <- matrix(1:20, 4, 5))
 lower.tri(m2)
 m2[lower.tri(m2)] <- NA
@@ -66,7 +70,7 @@ scenarios <- list(
 scenarios
 
 # (c)
-# Define the measurements for items
+# define the measurements for items
 measurements <- c(2, 1, 5, 8)
 
 # Function to calculate ESS
@@ -76,58 +80,86 @@ calculate_ESS <- function(items) {
   return(ess)
 }
 
-# Mean and ESS calculation for each potential merge
-
-# Merge {12} and {3}
+# mean and ESS calculation for each potential merge
+# merge {12} and {3}
 measurements_123 <- c(measurements[1], measurements[2], measurements[3])
 ess_123 <- calculate_ESS(measurements_123)
-
-# Merge {12} and {4}
+# merge {12} and {4}
 measurements_124 <- c(measurements[1], measurements[2], measurements[4])
 ess_124 <- calculate_ESS(measurements_124)
-
-# Merge {3} and {4}
+# merge {3} and {4}
 measurements_34 <- c(measurements[3], measurements[4])
 ess_34 <- calculate_ESS(measurements_34)
-
-# Output the ESS values
+# output the ESS values
 cat("ESS for merge {12} and {3}:", ess_123, "\n")
 cat("ESS for merge {12} and {4}:", ess_124, "\n")
 cat("ESS for merge {3} and {4}:", ess_34, "\n")
 
 
-# Function to calculate ESS
+# function to calculate ESS
 calculate_ESS <- function(items) {
   mean_value <- mean(items)
   ess <- sum((items - mean_value)^2)
   return(ess)
 }
 
-# Mean and ESS calculation for the final merge {12} and {34}
+# mean and ESS calculation for the final merge {12} and {34}
 ess_1234 <- calculate_ESS(measurements)
 
-# Output the ESS value
+# output the ESS value
 cat("ESS for the final merge {12} and {34}:", ess_1234, "\n")
 
 
-# Perform hierarchical clustering using Ward's method
+# perform hierarchical clustering using Ward's method
 hc <- hclust(dist(measurements), method = "ward.D")
-# Plot the dendrogram
-plot(hc, main = "Hierarchical Clustering with Ward's Method", xlab = "Distance Object", sub = "", labels = labels)
-# Manually calculated ESS values at each step
+# plot the dendrogram
+plot(hc, main = "Hierarchical Clustering with Ward's Method", xlab = "Distance Object", sub = "")
+# manually calculated ESS values at each step
 ess_values <- c(0.5, 4.5, 30.0) # Replace with your actual ESS values
 
-# Get the number of initial observations (items)
+# get the number of initial observations (items)
 n <- length(measurements)
 
-# Annotate the dendrogram with ESS values
+# annotate the dendrogram with ESS values
 for (i in 1:length(ess_values)) {
   # Find the height at which the merge occurs
   y_coord <- hc$height[i]
-
-  # Use the number of initial observations to adjust the x-coordinate
+  # use the number of initial observations to adjust the x-coordinate
   x_coord <- n - i + 0.5
-
-  # Add the ESS text annotation
+  # add the ESS text annotation
   text(x = x_coord, y = y_coord, labels = paste("ESS:", ess_values[i]), pos = 3)
 }
+
+
+# 12.28
+# data setup
+col_names <- c("Family", "DistRD", "Cotton", "Maize", "Sorg", "Millet", "Bull", "Cattle", "Goats")
+df <- read.table(file.path(main_path, "hw9/T8-7.txt"), header=FALSE, col.names=col_names)
+df <- df[-c(25, 34, 69, 72),]
+# check if the data is numeric or not
+sapply(df, is.numeric)
+
+# perform K-means clustering with K = 4, 5, 6
+kmeans_3 <- kmeans(df, centers = 3)
+kmeans_4 <- kmeans(df, centers = 4)
+kmeans_5 <- kmeans(df, centers = 5)
+kmeans_6 <- kmeans(df, centers = 6)
+
+# display the cluster centers
+clusplot(df, kmeans_3$cluster, color=TRUE, shade=TRUE, labels=2, lines=0, main="K-means Clustering with K = 3")
+clusplot(df, kmeans_4$cluster, color=TRUE, shade=TRUE, labels=2, lines=0, main="K-means Clustering with K = 4")
+clusplot(df, kmeans_5$cluster, color=TRUE, shade=TRUE, labels=2, lines=0, main="K-means Clustering with K = 5")
+clusplot(df, kmeans_6$cluster, color=TRUE, shade=TRUE, labels=2, lines=0, main="K-means Clustering with K = 6")
+
+
+# 12.26
+# calculate the Euclidean distance between pairs of farms
+dist_matrix <- dist(df)
+# perform hierarchical clustering using average linkage
+hc_average <- hclust(dist_matrix, method = "average")
+# perform hierarchical clustering using Ward's method
+hc_ward <- hclust(dist_matrix, method = "ward.D2")
+# plot the dendrograms
+par(mfrow = c(1, 2)) # set the plotting area to display two plots side by side
+plot(hc_average, main = "Average Linkage", xlab = "Farms", sub = "")
+plot(hc_ward, main = "Ward's Method", xlab = "Farms", sub = "")
