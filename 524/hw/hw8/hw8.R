@@ -4,7 +4,7 @@ library("MASS")
 
 # path setup
 current_note_path <- getwd()
-main_path <- file.path(current_note_path, "hw")
+main_path <- file.path(current_note_path, "524/hw")
 
 # 11.24
 # (a)
