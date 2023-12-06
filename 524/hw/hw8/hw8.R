@@ -8,7 +8,8 @@ main_path <- file.path(current_note_path, "524/hw")
 
 # 11.24
 # (a)
-df <- read.table(file.path(main_path, "hw8/T11-4.txt"), header = F) %>% data.frame()
+df <- read.table(file.path(main_path, "hw8/T11-4.txt"), header = FALSE) %>%
+  data.frame()
 is.data.frame(df)
 colnames(df) <- c("x1", "x2", "x3", "x4", "Population")
 
@@ -42,13 +43,11 @@ t(mu1) %*% solve(s1) - t(mu2) %*% solve(s2)
 
 k = 0.5 * log(det(s1) / det(s2)) + 0.5 * (t(mu1) %*% solve(s1) %*% mu1 - t(mu2) %*% solve(s2) %*% mu2)
 
-
-  # prediction <- apply(newdata, 1, function(y) 
-  #   d2.y1 <- (y - g1.means) %*% solve(g1.covar) %*% (y - g1.means)
-  #   d2.y2 <- (y - g2.means) %*% solve(g2.covar) %*% (y - g2.means)
-  #   ifelse(d2.y1^2 > d2.y2^2, 1, 0)
-  # })
-
+# prediction <- apply(newdata, 1, function(y)
+#   d2.y1 <- (y - g1.means) %*% solve(g1.covar) %*% (y - g1.means)
+#   d2.y2 <- (y - g2.means) %*% solve(g2.covar) %*% (y - g2.means)
+#   ifelse(d2.y1^2 > d2.y2^2, 1, 0)
+# })
 
 two.group.quadratic.classification <- function(data, grouping, newdata) {
   dat.split <- split(data, grouping)
@@ -59,20 +58,22 @@ two.group.quadratic.classification <- function(data, grouping, newdata) {
   g1.covar <- cov(g1)
   g2.covar <- cov(g2)
   k <- 0.5 * log(det(g1.covar) / det(g2.covar)) + 0.5 * (t(g1.means) %*% solve(g1.covar) %*% g1.means - t(g2.means) %*% solve(g2.covar) %*% g2.means)
+  # build a classification system based on the assumption of simga1 != sigma2
   prediction <- apply(newdata, 1, function(y) {
     quad <- -0.5 * t(y) %*% (solve(g1.covar) - solve(g2.covar)) %*% y + (t(g1.means) %*% solve(g1.covar) - t(g2.means) %*% solve(g2.covar)) %*% y - k
     ifelse(quad >= 0, 0, 1)
-    })
-  class.table <- table(grouping, prediction, dnn = c("Actual Group","Predicted Group"))
+  })
+
+  class.table <- table(grouping, prediction, dnn = c("Actual Group", "Predicted Group"))
   pred.errors <- sum(diag(t(apply(class.table, 2, rev)))) / dim(data)[1]
   results <- list("Prediction" = prediction, "Table of Predictions" = class.table, "Error Rate" = pred.errors)
   return(results)
 }
 
-df.quad <- two.group.quadratic.classification(df[,1:2], df[,5], df[,1:2])
+df.quad <- two.group.quadratic.classification(df[, 1:2], df[, 5], df[, 1:2])
 df.quad
-
-df2.quad <- two.group.quadratic.classification(df[2:46,1:2], df[,5], df[,1:2])
+# holdout procedure -> omit one observation from pi_1 group
+df2.quad <- two.group.quadratic.classification(df[2:46, 1:2], df[, 5], df[, 1:2])
 df2.quad
 
 #f
