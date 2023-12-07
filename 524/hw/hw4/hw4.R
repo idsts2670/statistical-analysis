@@ -2,7 +2,6 @@
 library("tidyverse")
 library("car")
 library("ggplot2")
-library("tidyr")
 library("MASS")
 # library("zoom")
 # library("MVN")
@@ -15,7 +14,7 @@ current_note_path <- getwd()
 main_path <- file.path(current_note_path, "524/hw")
 
 
-# problem 5.9
+# 5.9
 ## draw the ellipse
 critical_value <- qchisq(0.95, df = 6)
 # Given means
@@ -57,3 +56,15 @@ rect(
     xright=mu1_interval[2], ytop=mu2_interval[2],
     col=rgb(0,0,0.4,0.2), border="white"
     )
+
+
+# 6.1
+# defining the sample covariance matrix S
+S = matrix(c(199.26, 88.38, 88.38, 418.61), nrow = 2, ncol = 2, byrow = TRUE)
+
+# Calculating eigenvalues and eigenvectors
+eigen_result <- eigen(S)
+
+# Displaying the results
+eigen_result$values     # Eigenvalues
+eigen_result$vectors    # Eigenvectors
