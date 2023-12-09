@@ -20,7 +20,7 @@ y <- c(15, 9, 3, 25, 7, 13)
 z1_star <- scale(z1, center=TRUE, scale=TRUE)
 z2_star <- scale(z2, center=TRUE, scale=TRUE)
 y_star <- scale(y, center=TRUE, scale=TRUE)
-Z_star <- cbind(z1_star, z2_star)
+Z_star <- cbind(z1_star, z2_star); Z_star
 beta_star <- solve(t(Z_star) %*% Z_star) %*% t(Z_star) %*% y_star
 
 solve((t(Z) %*% Z))
