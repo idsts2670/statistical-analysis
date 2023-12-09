@@ -14,7 +14,7 @@ main_path <- file.path(current_note_path, "524/hw")
 # data setup
 col_names <- c("Wind", "Solar_radiation", "CO", "NO", "NO_2", "O3", "HC")
 df <- read.table(file.path(main_path, "hw6/T1-5.txt"), header=FALSE, col.names=col_names)
-
+head(df)
 
 # PCA using prcomp function
 ## PCA using the covariance matrix S
@@ -23,15 +23,17 @@ pca_cov <- prcomp(df, scale = FALSE)
 ## PCA using the correlation matrix R (data is scaled to have unit variance)
 pca_cor <- prcomp(df, scale = TRUE)
 
-## Compare the results
+## compare the results
 summary(pca_cov)
 summary(pca_cor)
-pca_cov$rotation # For the covariance matrix S
-pca_cor$rotation # For the correlation matrix R
+pca_cov$rotation # for the covariance matrix S. This represents the coefficients of the linear combinations that produce the principal components from the original variables.
+pca_cor$rotation # for the correlation matrix R
 
 ## create a scree plot
-plot(pca_cov)
-plot(pca_cor)
+variances_cov <- pca_cov$sdev^2
+plot(variances_cov, type = "b", main = "Scree Plot", xlab = "Principal Component with S", ylab = "Variance")
+variances_cor <- pca_cor$sdev^2
+plot(variances_cor, type = "b", main = "Scree Plot", xlab = "Principal Component with R", ylab = "Variance")
 ## create a biplot
 biplot(pca_cov)
 biplot(pca_cor)
