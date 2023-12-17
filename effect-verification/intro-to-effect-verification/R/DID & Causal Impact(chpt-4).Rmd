@@ -6,7 +6,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-# 4.1 DID（差分の差分法）
+# 4.1 DID (差分の差分法)
 ## ライブラリの準備
 ```{r,message=FALSE}
 # tidyverseとbroomの読み込み
