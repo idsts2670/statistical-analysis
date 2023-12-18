@@ -45,7 +45,10 @@ options(repr.plot.width = 12, repr.plot.height = 6)
 bayesplot_theme_set(theme_default(base_size = 24, base_family = "sans"))
 ```
 
+<center>
 # Gibbs sampling for normal hierarchical models
+</center>
+
 ## Q2
 
 * 1.(For both models) Sample from $\mu, \tau^2 \mid \theta_1, \ldots, \theta_J, \sigma_1^2, \ldots, \sigma_J^2, Y$, and then
@@ -388,8 +391,9 @@ Your hierarchical model should allow statistical sharing among individuals and p
 Firstly, we define a parameter as below:
 
 ```{r}
-stroop <- read.csv("
-/Users/satoshiido/Documents/statistical-analysis/656/hw/hw3/stroop_dataset.csv")
+stroop <- read.csv(
+"/Users/satoshiido/Documents/statistical-analysis/656/hw/hw3/stroop_dataset.csv"
+)
 head(stroop)
 ```
 
@@ -514,7 +518,10 @@ mcmc_areas(row_vec) +
   )) +
   ggtitle("Posterior distribution of the mean effect 
   across all the individual responses to three color") +
-  theme(plot.title = element_text(size = 20))
+  theme(plot.title = element_text(size = 12),
+        axis.text.x = element_text(size = 8),
+        axis.text.y = element_text(size = 8)
+        )
 ```
 
 We can check the posterior distribution of the standard deviation of the mean effect across all the individual responses to three color as below:
@@ -529,7 +536,10 @@ mcmc_areas(post_smp[c(52:54)], prob = 0.8) +
   )) +
   ggtitle("Posterior distribution of the standard deviation of 
   the mean effect across all the individual responses to three color") +
-  theme(plot.title = element_text(size = 15))
+  theme(plot.title = element_text(size = 12),
+        axis.text.x = element_text(size = 8),
+        axis.text.y = element_text(size = 8)
+        )
 
 ```
 

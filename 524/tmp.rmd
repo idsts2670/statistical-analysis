@@ -1,0 +1,119 @@
+---
+title: "final prep"
+author: "Satoshi Ido (ID: 34788706)"
+output: pdf_document
+---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    message = FALSE)
+```
+
+```{r}
+library("ggplot2")
+library("MASS")
+library("fs")
+library("moments")
+```
+
+To delve deeper into the mathematical proof that the second (or any subsequent) pair of canonical variates is uncorrelated with the first pair in canonical correlation analysis, let's start by understanding the setup and then proceed step-by-step through the proof.
+
+### Canonical Correlation Analysis Setup
+
+In canonical correlation analysis (CCA), you have two sets of variables, \( X \) and \( Y \). The goal is to find linear combinations of these variables, called canonical variates, that are maximally correlated with each other. The first pair of canonical variates, \( U_1 \) and \( V_1 \), is found to maximize this correlation. The second pair, \( U_2 \) and \( V_2 \), is found under the constraint that it is uncorrelated with the first pair.
+
+Let's define:
+
+- \( U_1 = a_1^T X \)
+- \( V_1 = b_1^T Y \)
+- \( U_2 = a_2^T X \)
+- \( V_2 = b_2^T Y \)
+
+### Proof of Uncorrelation
+
+#### Objective of CCA for the Second Pair
+
+The objective for the second pair of canonical variates, \( U_2 \) and \( V_2 \), is to maximize their correlation while ensuring they are uncorrelated with \( U_1 \) and \( V_1 \).
+
+#### Mathematical Formulation
+
+This objective leads to the following constraints:
+
+1. \( U_2 \) (i.e., \( a_2^T X \)) must be uncorrelated with \( U_1 \) (i.e., \( a_1^T X \)).
+2. \( V_2 \) (i.e., \( b_2^T Y \)) must be uncorrelated with \( V_1 \) (i.e., \( b_1^T Y \)).
+
+Mathematically, these constraints are:
+
+- \( \text{Cov}(U_2, U_1) = \text{Cov}(a_2^T X, a_1^T X) = 0 \)
+- \( \text{Cov}(V_2, V_1) = \text{Cov}(b_2^T Y, b_1^T Y) = 0 \)
+
+#### Proving the Uncorrelation
+
+For \( U_2 \) and \( V_1 \), we need to show \( \text{Cov}(U_2, V_1) = 0 \):
+
+- \( \text{Cov}(U_2, V_1) = \text{Cov}(a_2^T X, b_1^T Y) \)
+- Expand the covariance: \( \text{Cov}(U_2, V_1) = a_2^T \text{Cov}(X, Y) b_1 \)
+- Since \( \text{Cov}(X, Y) \) is the covariance matrix between \( X \) and \( Y \), and \( a_2 \) is chosen specifically to be uncorrelated with \( a_1^T X \), and \( b_1 \) is associated with \( V_1 \), this results in \( \text{Cov}(U_2, V_1) = 0 \).
+
+Similarly, for \( V_2 \) and \( U_1 \), we can show \( \text{Cov}(V_2, U_1) = 0 \):
+
+- \( \text{Cov}(V_2, U_1) = \text{Cov}(b_2^T Y, a_1^T X) \)
+- Expand the covariance: \( \text{Cov}(V_2, U_1) = b_2^T \text{Cov}(Y, X) a_1 \)
+- Applying the constraint that \( b_2 \) and \( a_1 \) are chosen to ensure uncorrelation, this leads to \( \text{Cov}(V_2, U_1) = 0 \).
+
+### Conclusion
+
+This mathematical proof shows that the second pair of canonical variates is uncorrelated with the first pair. The key to this proof is in the constraints applied during the maximization process in CCA, where each new pair of canonical variates is chosen to be uncorrelated with all previously determined pairs. This ensures that the canonical variates extracted from the analysis provide distinct, uncorrelated dimensions of maximal correlation between the two variable sets.
+
+
+
+
+Certainly! Let's delve deeper into the mathematical proof of the properties of canonical variates in canonical correlation analysis (CCA). 
+
+### Canonical Variates Setup
+
+In CCA, canonical variates \( U_k \) and \( V_k \) are defined as linear combinations of the variables in sets \( X \) and \( Y \) respectively:
+
+- \( U_k = a_k^T X \)
+- \( V_k = b_k^T Y \)
+
+where \( a_k \) and \( b_k \) are coefficient vectors.
+
+### Proof of Properties
+
+#### Property 1: Var(U_k) = Var(V_k) = 1
+
+The variances of \( U_k \) and \( V_k \) are standardized to be 1. The variance of \( U_k \) is calculated as:
+
+\[ \text{Var}(U_k) = \text{Var}(a_k^T X) = a_k^T \Sigma_X a_k \]
+
+where \( \Sigma_X \) is the covariance matrix of \( X \). The coefficients \( a_k \) are chosen to ensure that this variance equals 1. A similar process applies to \( V_k \) with \( \Sigma_Y \) and \( b_k \).
+
+#### Property 2: Cov(U_k, U_l) = 0 for k != l
+
+The covariance between different canonical variates \( U_k \) and \( U_l \) is:
+
+\[ \text{Cov}(U_k, U_l) = \text{Cov}(a_k^T X, a_l^T X) = a_k^T \Sigma_X a_l \]
+
+Since \( a_k \) and \( a_l \) are chosen to be orthogonal for different canonical variates (i.e., \( k \neq l \)), this covariance is zero.
+
+#### Property 3: Cov(V_k, V_l) = 0 for k != l
+
+Similarly, for \( V_k \) and \( V_l \):
+
+\[ \text{Cov}(V_k, V_l) = \text{Cov}(b_k^T Y, b_l^T Y) = b_k^T \Sigma_Y b_l \]
+
+Again, \( b_k \) and \( b_l \) are chosen to be orthogonal for \( k \neq l \), leading to zero covariance.
+
+#### Property 4: Cov(U_k, V_l) = 0 for k != l
+
+This property ensures that canonical variates from different pairs are uncorrelated:
+
+\[ \text{Cov}(U_k, V_l) = \text{Cov}(a_k^T X, b_l^T Y) \]
+
+Given that canonical variates are solutions to an optimization problem that maximizes correlation for each pair and ensures orthogonality (zero correlation) between different pairs, \( \text{Cov}(U_k, V_l) = 0 \) for \( k \neq l \).
+
+### Conclusion
+
+The orthogonality constraints in the construction of canonical variates in CCA result in these properties. Specifically, the coefficient vectors \( a_k \) and \( b_k \) for each canonical variate pair are chosen not only to maximize correlation within a pair but also to ensure orthogonality (zero correlation) between different pairs. This orthogonality is key to ensuring that each pair of canonical variates captures unique and uncorrelated information from the datasets.
