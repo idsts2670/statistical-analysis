@@ -1,0 +1,555 @@
+---
+title: "BDA_hw1"
+author: "Hyeong Jin Hyun"
+date: '2023-09-05'
+output:
+  html_document: default
+  pdf_document: 
+    keep_tex: TRUE
+---
+
+```{r, include=FALSE}
+options(tinytex.verbose = TRUE)
+```
+
+```{r setup, include=FALSE}
+require(moments)
+knitr::opts_chunk$set(echo = TRUE)
+dat = read.csv("computation_data_hw_1.csv")
+y = dat$x
+n = length(y)
+```
+
+# Synthetic Data
+## 1  
+### Write the log-likelihood function $log L(\rho, \sigma^2|y_0, y_1, . . . , y_n)$ for $(\rho, \sigma^2)$ for the AR(1) model. 
+$$
+L(\rho, \sigma^2| y_0, \cdots, y_n) = p(y_1|y_0,\rho,\sigma^2) p(y_2|y_1,y_0\rho,\sigma^2) \cdots p(y_n|y_{n-1}y_{n-1}\dots y_0,\rho,\sigma^2) \\
+ =  p(y_1|y_0,\rho,\sigma^2)p(y_2|y_1,\rho,\sigma^2)\cdots p(y_n|y_{n-1},\rho,\sigma^2)\\
+ = \frac{1}{\sqrt{2\pi}\sigma} \exp(-\frac{(y_1-\rho y_0)^2}{2\sigma^2}) \frac{1}{\sqrt{2\pi}\sigma} \exp(-\frac{(y_2-\rho y_1)^2}{2\sigma^2}) \cdots \frac{1}{\sqrt{2\pi}\sigma} \exp(-\frac{(y_n-\rho y_{n-1})^2}{2\sigma^2}) \\
+ = ( \frac{1}{\sqrt{2\pi}\sigma} )^n \exp(-\sum_{i=1}^n \frac{(y_i-\rho y_{i-1})^2}{2\sigma^2})
+$$
+
+For rest of this problem, we shall take $\rho$ to be our estimand of interest, and consider data in the file computation data hw 1.csv, generated from this type of process with $y_0 = 0$.
+
+
+## 2 
+### Write an R function that computes the log of the likelihood functions for $(\rho, \log \sigma )^\top$ for this data.
+```{r}
+ar_loglik <- function(rho,logsig) {
+  # Do stuff with data loaded from computation_data_hw_1.csv # You can make the data also an input to the function,
+  # or treat it as a global variable
+  yi = y[2:n]
+  yi1 = y[1:(n-1)]
+  return(-n/2 * log(2*pi) - n* logsig - (sum(yi^2) - 2* sum(yi1 * yi) * rho + sum(yi1^2) * rho^2  ) /(2*exp(logsig)^2)  )
+}
+```
+
+### Provide a visualization of both as a contour plot.
+```{r}
+len_out = 200
+rho_plt <- seq(from = -1, to = 1, length.out =len_out)
+logsigma_plt <- seq(from = -2, to = 2, length.out =len_out)
+out <- outer(rho_plt, logsigma_plt, ar_loglik)
+contour(rho_plt, logsigma_plt, out, nlevels= 100, xlab = "rho", ylab = "logsigma")
+```
+
+## 3
+### For the purposes of this problem, suppose we specify $\rho ∼ Uniform(−1, 1), \log\sigma ∼ N(0, 10^2)$ independently a priori (note that this may not be an appropriate prior for the parameters of an AR(1) model in general). Write an R function that computes the log of the posterior density (upto a constant) for $(\rho,\log\sigma)^\top$ under this prior. Provide a visualizations of this function as above. 
+
+I write the function in 'ar_post'
+```{r}
+rho_plt <- seq(from = -1, to = 1, length.out =len_out)
+logsigma_plt <- seq(from = -2, to = 2, length.out =len_out)
+ar_post <- function(rho,logsig) {
+  # Do stuff with data loaded from computation_data_hw_1.csv # You can make the data also an input to the function,
+  # or treat it as a global variable
+  yi = y[2:n]
+  yi1 = y[1:(n-1)]
+  lik = -n/2 * log(2*pi) - n* logsig - (sum(yi^2) - 2* sum(yi1 * yi) * rho + sum(yi1^2) * rho^2  ) /(2*exp(logsig)^2) 
+  prior = dnorm(logsig, mean = 0, sd = 10)  
+  return(lik + prior)
+}
+
+out2 <- outer(rho_plt, logsigma_plt, ar_post)
+contour(rho_plt, logsigma_plt, out2, nlevels= 100, xlab = "rho", ylab = "logsigma")
+```
+
+### How does this function correspond to the log-likelihood function? Would you say that this prior specification is overly informative? Why or why not?
+
+#### Answer: this function looks very like the log-likelihood function. I don't think this prior specification is overly informative, since the contour plot of both would look different each other if the prior was specifically informative.
+
+## 5
+### Draw 1000 values of $(\rho, \log\sigma)^\top$ from a discrete grid approximation to the posterior. Be sure to describe your choice of discrete grid. 
+
+#### Answer: Based on the observation in the question \#3 and \#5,
+my discrete grid is reduced to $(-1,1)\times (-2,2)$. First the range of $\rho$ is given as $(-1,1)$, so I chose this prior. Also, as seen in the plot above, the most of posterior parameter set $\log\sigma$ is concentrated around -0.5, but the and the probability that $\log\sigma$ is selected away from <-2 and >2 is very unlikely. Using the hint provided, I use the function `sample` to generate discrete grid approxiamation to the posterior.
+
+```{r cars}
+set.seed(1)
+rho_col = rep(rho_plt,len_out)
+logsigma_col = rep(logsigma_plt,each = len_out)
+tmp = data.frame(out2 = as.vector(out2), rho_col = rho_col, logsigma_col = logsigma_col)
+ind = sample(1:length(tmp$out2), size = 1000, prob = exp(tmp$out2))
+```
+
+## 7
+### Use these draws to calculate the following summaries for each of ρ and log(σ): 0.025, 0.25, 0.5, 0.75, 0.975 quantiles, mean, standard deviation, skewness, and kurtosis. You can use the library `moments` if you want.
+
+```{r}
+#7
+apply(tmp[ind,c(2,3)],2,summary)
+apply(tmp[ind,c(2,3)],2,sd)
+apply(tmp[ind,c(2,3)],2,skewness)
+apply(tmp[ind,c(2,3)],2,kurtosis)
+```
+
+## 8 
+### Write an R function that takes parameters $(\rho, \log\sigma)^\top$ and simulates a new dataset $y^{rep}$ according to the AR process. Recall that we can simulate from the posterior predictive distribution of new datasets $y^{rep}$ given todays dataset as follows: first simulate a parameter set from the posterior distribution, and use this to simulate a new dataset. Use your two earlier R functions to generate 1000 such posterior predictive samples. Summarize your draws.
+
+I made a function `AR_sample` to simulatie a dataset $y^{rep}$. Also, I summarize the sampled results comparing with the real data. Several summaries of posterior predictive distribution of new data are histogramed and those of the observed data are represented as red line. As seen in the plot below, the observed data are within the range of summaries of posterior predictive distributoin. 
+
+```{r}
+AR_sample <- function(rho, logsig){
+  tmp<- matrix(NA, length(rho), n)
+  tmp[,1]<-1
+  for (i in 2:n ){
+    err = rnorm(length(logsig), mean=0, sd = exp(logsig))
+    tmp[,i]<-tmp[,i-1] * rho + err
+  }
+  return(tmp)
+}
+post = tmp[ind,c(2,3)]
+
+y_pred = AR_sample(post$rho_col, post$logsigma_col)
+
+y_pred_summary = apply(y_pred,1,summary)
+y_pred_min = y_pred_summary[1,]
+y_pred_1Q = y_pred_summary[2,]
+y_pred_med = y_pred_summary[3,]
+y_pred_mean = y_pred_summary[4,]
+y_pred_3Q = y_pred_summary[5,]
+y_pred_max = y_pred_summary[6,]
+
+par(mfrow=c(3,3))
+hist(y_pred_min, breaks = 50, main = "min")
+abline(v = min(y),col = "red")
+legend(-3, 40, legend = c("obs"), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_1Q, breaks = 50, main = "1Q")
+abline(v = quantile(y,prob = .25),col = "red")
+
+hist(y_pred_med, breaks = 50, main = "med")
+abline(v = quantile(y,prob = .5),col = "red")
+
+hist(y_pred_mean, breaks = 50, main = "mean")
+abline(v = mean(y),col = "red")
+
+hist(y_pred_3Q, breaks = 50, main = "3Q")
+abline(v = quantile(y,prob = .75),col = "red")
+
+hist(y_pred_max, breaks = 50, main = "max")
+abline(v = max(y),col = "red")
+```
+
+## 9
+### Compare the observed data to these posterior predictive summaries. Also create a plot where the observed data is suporposed on these posterior predictive trajectories. What can you say about the model fit? Does the model appear appropriate?
+
+```{r}
+plot(y,type = "l", col = "red", lwd = 5, ylim = c(-2,2))
+for (j in 1:1000){
+  lines(y_pred[j,], type = "l")
+}
+lines(y,type = "l", col = "red", lwd = 5)
+```
+
+I plot 1000 samples of trajectory from the posterior predictive distributions represented in black lines, and the observed data in red thick lines. As seen in the plot represented, the observed data is suporposed on those sample trajectories. It implies a positive sign for model fitting since the black trajectories are possible ways of sample trajectories based on the posterior distrbutions, and the actual data is obeserved among those possible ways.
+
+
+# Real Data
+### Here we will use your functions from the previous question to determine the utility of the AR(1) model for predicting COVID-19 cases and deaths. Specifically, you will analyze two sets of data that contain the cases and deaths from COVID-19 in the United States overall, and for each individual state, respectively. The data on cases and deaths in the entire United States are in covid us.txt, and the data on cases and deaths for each individual state are in covid us-states.txt. Both datasets were downloaded from the New York Times’ Coronavirus (COVID-19) Data in the United States Github page, which contains further information and details regarding these data.
+
+## 1 
+### Do you believe that the information given on the Github page is sufficient for analyzing the data? Why or why not? If not, what other information would you have requested that the New York Times provide, or what other information would you have collected if you had the resources to do so?
+
+```{r}
+#1
+covid_us = read.csv("covid_us.txt")
+covid_us_states = read.csv("covid_us-states.txt")
+head(covid_us)
+```
+
+I don't think the information is not sufficient for analyzing the data. I think it is difficult to model the epidemiology of this covid 19 diseases. Since the disease is affected by numerous social, economical, political and demographic property that the population has. Therefore, I would request several covariate to explain outbreaks of coronavirus such as population density, if there is strict policy of regulating population's mobility and so on.
+
+
+# 2
+### Specify an AR(1) model for the data on the entire United States (not any of the individual states). In particular, would you model the raw data as an AR(1) process, or would you transform it first in some way? Explain.
+
+```{r}
+n = length(covid_us$cases)
+set.seed(1)
+
+plot(covid_us$cases)
+plot(log(covid_us$cases))
+```
+
+I won't model with AR(1) model. AR(1) model assumes the Markovian property i.e. the observation at time $t$ only depends on the data at time $t-1$. While the time lag of this data is 1 day, the time from exposure to symptom onset (known as the incubation period) is thought to be two to 14 days. Also, since it takes more time to be cured from covid 19, it is unrealistic to assume the cases of covid-19 at time $t$ only depends on $t-1$.
+
+If we plot the process of the covid 19 cases of the Unitied States, there are two problems. The first is about the scale of the data. Since the data is about the count, I think it needs to be scaled in some ways. Secondly, the behavior of the cases of covid-19 moves differently from two time points. For example, around the index 60, the cases are skyrocketed and similar around 160.
+
+If I should model with AR(1) model, I would transform it. 
+First, I consider the log transformation, but I don't think it's not good way to model with AR(1) due to the second problem. Due to the complexity of data, it is hard to find an optimal tranformation for this data.
+
+Since we will take care of before the date 2020-07-01, I ignore the second issue and only focus on the scaling to fit the AR(1) model. I divide the cases by 1e6 for `cases` and by 1e5 for `deaths`, and fit the AR(1) model.
+```{r}
+y = covid_us$cases[covid_us$date<"2020-07-01"]/100000
+plot(y)
+
+y = covid_us$deaths[covid_us$date<"2020-07-01"]/10000
+plot(y)
+```
+
+## 3
+### Specify a prior for all of the model parameters. You can choose any prior you like, but you must justify your choice.
+
+First I note that the range of $\rho$ should be >1, since the trajectory of covid-19 cases indicate that the cases tends to increase over time. Therefore, I should use this information, forcing the range of $\rho$ greater than 1. 
+
+I chose $(\rho, \log\sigma \sim U(0.95,1.1)\times U(-3,2)$ for both `cases` and `deaths`.
+
+
+## 4
+### Fit your AR(1) model to data from the first time point until June 30. Calculate and provide a visualization of the posterior distribution of the estimand. Summarize the posterior distribution using moments as before.
+
+#### Cases
+```{r}
+y = covid_us$cases[covid_us$date<"2020-07-01"]/100000
+plot(y)
+
+n = length(y)
+rho_plt2 <- seq(from = 0.95, to = 1.1, length.out=len_out)
+logsigma_plt2 <- seq(from = -3, to = 2, length.out=len_out)
+out3 <- outer(rho_plt2, logsigma_plt2, ar_post)
+
+contour(rho_plt2, logsigma_plt2, out3, nlevels= 1000, xlab = "rho", ylab = "logsigma")
+
+set.seed(1)
+rho_col = rep(rho_plt2,len_out)
+logsigma_col = rep(logsigma_plt2,each = len_out)
+
+tmp = data.frame(out3 = as.vector(out3), rho_col = rho_col, logsigma_col = logsigma_col)
+
+ind = sample(1:length(tmp$out3), size = 1000, prob = exp(tmp$out3))
+apply(tmp[ind,c(2,3)],2,summary)
+apply(tmp[ind,c(2,3)],2,sd)
+apply(tmp[ind,c(2,3)],2,skewness)
+apply(tmp[ind,c(2,3)],2,kurtosis)
+```
+
+#### Deaths
+```{r}
+# deaths
+y = covid_us$deaths[covid_us$date<"2020-07-01"]/10000
+plot(y)
+n = length(y)
+rho_plt2 <- seq(from = 0.95, to = 1.1, length.out=len_out)
+logsigma_plt2 <- seq(from = -5, to = 2, length.out=len_out)
+out3 <- outer(rho_plt2, logsigma_plt2, ar_post)
+
+contour(rho_plt2, logsigma_plt2, out3, nlevels= 1000, xlab = "rho", ylab = "logsigma")
+
+set.seed(1)
+rho_col = rep(rho_plt2,len_out)
+logsigma_col = rep(logsigma_plt2,each = len_out)
+tmp = data.frame(out3 = as.vector(out3), rho_col = rho_col, logsigma_col = logsigma_col)
+ind = sample(1:length(tmp$out3), size = 1000, prob = exp(tmp$out3))
+apply(tmp[ind,c(2,3)],2,summary)
+apply(tmp[ind,c(2,3)],2,sd)
+apply(tmp[ind,c(2,3)],2,skewness)
+apply(tmp[ind,c(2,3)],2,kurtosis)
+```
+
+
+## 5
+### Conduct a posterior predictive check to diagnose the fit of your model for the data until June 30. Does your model provide good predictions? Why or why not? If not, describe how you would consider modifying it to address the observed inadequacies (you don’t have to actually do this).
+
+#### Cases
+```{r, echo=FALSE}
+y = covid_us$cases[covid_us$date<"2020-07-01"]/100000
+
+n = length(y)
+rho_plt2 <- seq(from = 0.95, to = 1.1, length.out=len_out)
+logsigma_plt2 <- seq(from = -3, to = 2, length.out=len_out)
+out3 <- outer(rho_plt2, logsigma_plt2, ar_post)
+
+contour(rho_plt2, logsigma_plt2, out3, nlevels= 1000, xlab = "rho", ylab = "logsigma")
+
+set.seed(1)
+rho_col = rep(rho_plt2,len_out)
+logsigma_col = rep(logsigma_plt2,each = len_out)
+
+tmp = data.frame(out3 = as.vector(out3), rho_col = rho_col, logsigma_col = logsigma_col)
+
+ind = sample(1:length(tmp$out3), size = 1000, prob = exp(tmp$out3))
+```
+
+```{r}
+post = tmp[ind,c(2,3)]
+
+y_pred = AR_sample(post$rho_col, post$logsigma_col)
+
+y_pred_summary = apply(y_pred,1,summary)
+y_pred_min = y_pred_summary[1,]
+y_pred_1Q = y_pred_summary[2,]
+y_pred_med = y_pred_summary[3,]
+y_pred_mean = y_pred_summary[4,]
+y_pred_3Q = y_pred_summary[5,]
+y_pred_max = y_pred_summary[6,]
+
+par(mfrow=c(2,3))
+hist(y_pred_min, breaks = 50, main = "min")
+abline(v = min(y),col = "red")
+legend(-25, 300, legend = c("obs"), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_1Q, breaks = 50, main = "1Q")
+abline(v = quantile(y,prob = .25),col = "red")
+
+hist(y_pred_med, breaks = 50, main = "med")
+abline(v = quantile(y,prob = .5),col = "red")
+
+hist(y_pred_mean, breaks = 50, main = "mean")
+abline(v = mean(y),col = "red")
+
+hist(y_pred_3Q, breaks = 50, main = "3Q")
+abline(v = quantile(y,prob = .75),col = "red")
+
+hist(y_pred_max, breaks = 50, main = "max")
+abline(v = max(y),col = "red")
+```
+
+
+#### Deaths 
+```{r, echo=FALSE}
+y = covid_us$deaths[covid_us$date<"2020-07-01"]/10000
+
+n = length(y)
+rho_plt2 <- seq(from = 0.95, to = 1.1, length.out=len_out)
+logsigma_plt2 <- seq(from = -3, to = 2, length.out=len_out)
+out3 <- outer(rho_plt2, logsigma_plt2, ar_post)
+
+contour(rho_plt2, logsigma_plt2, out3, nlevels= 1000, xlab = "rho", ylab = "logsigma")
+
+set.seed(1)
+rho_col = rep(rho_plt2,len_out)
+logsigma_col = rep(logsigma_plt2,each = len_out)
+
+tmp = data.frame(out3 = as.vector(out3), rho_col = rho_col, logsigma_col = logsigma_col)
+
+ind = sample(1:length(tmp$out3), size = 1000, prob = exp(tmp$out3))
+```
+
+```{r}
+post = tmp[ind,c(2,3)]
+
+y_pred = AR_sample(post$rho_col, post$logsigma_col)
+
+y_pred_summary = apply(y_pred,1,summary)
+y_pred_min = y_pred_summary[1,]
+y_pred_1Q = y_pred_summary[2,]
+y_pred_med = y_pred_summary[3,]
+y_pred_mean = y_pred_summary[4,]
+y_pred_3Q = y_pred_summary[5,]
+y_pred_max = y_pred_summary[6,]
+
+par(mfrow=c(2,3))
+hist(y_pred_min, breaks = 50, main = "min")
+abline(v = min(y),col = "red")
+legend(-25, 300, legend = c("obs"), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_1Q, breaks = 50, main = "1Q")
+abline(v = quantile(y,prob = .25),col = "red")
+
+hist(y_pred_med, breaks = 50, main = "med")
+abline(v = quantile(y,prob = .5),col = "red")
+
+hist(y_pred_mean, breaks = 50, main = "mean")
+abline(v = mean(y),col = "red")
+
+hist(y_pred_3Q, breaks = 50, main = "3Q")
+abline(v = quantile(y,prob = .75),col = "red")
+
+hist(y_pred_max, breaks = 50, main = "max")
+abline(v = max(y),col = "red")
+```
+
+It looks quite appropriate to model using AR(1) model. Every summary statistics of the observed data are quite superposed in the other predictive posterior distributions. It indicates that the behavior of covid-19 before 2020-06-30 is well fitted with AR(1) model with posterior parameter calculated above.
+
+
+## 6
+### Simulate posterior predictions for the cases and deaths in the United States from July 1 until August 25. Compare these posterior predictions to the actual values of the two variables, and comment on the quality of the AR(1) model for predicting future cases and deaths in this context.
+
+I create the function `AR_pred` to simulate the posterior predictions for the cases and deaths in the U.S. Like the previous problems, I compare 6 summaries of predicted samples with those of acutal trajectories.
+#### Cases
+```{r, echo= FALSE}
+#6 Posterior predictive
+y = covid_us$cases[covid_us$date<"2020-07-01"]/100000
+n = length(y)
+rho_plt2 <- seq(from = 0.95, to = 1.1, length.out=len_out)
+logsigma_plt2 <- seq(from = -3, to = 2, length.out=len_out)
+out3 <- outer(rho_plt2, logsigma_plt2, ar_post)
+set.seed(1)
+rho_col = rep(rho_plt2,len_out)
+logsigma_col = rep(logsigma_plt2,each = len_out)
+tmp = data.frame(out3 = as.vector(out3), rho_col = rho_col, logsigma_col = logsigma_col)
+ind = sample(1:length(tmp$out3), size = 1000, prob = exp(tmp$out3))
+
+y1 = covid_us$cases[covid_us$date>"2020-06-30"]/100000
+
+n1 = length(y1)
+```
+```{r}
+AR_pred<-function(y0, rho_, logsig_, n_){
+  tmp<- matrix(NA, length(rho_), n_)
+  tmp[,1]<-y0
+  for (i in 2:n_){
+    err = rnorm(length(logsig_), mean=0, sd = exp(logsig_))
+    tmp[,i]<-tmp[,i-1] * rho_ + err
+  }
+  return(tmp)
+}
+
+y_pred = AR_pred(y1[1], rho_col, logsigma_col, n1-1)
+
+y_pred_summary = apply(y_pred,1,summary)
+y_pred_min = y_pred_summary[1,]
+y_pred_1Q = y_pred_summary[2,]
+y_pred_med = y_pred_summary[3,]
+y_pred_mean = y_pred_summary[4,]
+y_pred_3Q = y_pred_summary[5,]
+y_pred_max = y_pred_summary[6,]
+
+par(mfrow=c(2,3))
+hist(y_pred_min, breaks = 50, main = "min")
+abline(v = min(y1),col = "red")
+legend(-2000, 10000, legend = c(paste0("obs min =", min(y1))), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_1Q, breaks = 50, main = "1Q")
+abline(v = quantile(y1,prob = .25),col = "red")
+legend(-600, 4000, legend = c(paste0("obs 1Q =", quantile(y1,.25))), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_med, breaks = 50, main = "med")
+abline(v = quantile(y1,prob = .55),col = "red")
+legend(0, 5000, legend = c(paste0("obs med =", median(y1))), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_mean, breaks = 50, main = "mean")
+abline(v = mean(y1),col = "red")
+legend(100, 5000, legend = c(paste0("obs mean =", mean(y1))), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_3Q, breaks = 50, main = "3Q")
+abline(v = quantile(y,prob = .75),col = "red")
+legend(1000, 5000, legend = c(paste0("obs 3Q =", quantile(y1,.75))), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_max, breaks = 50, main = "max")
+abline(v = max(y1),col = "red")
+legend(1000, 10000, legend = c(paste0("obs max =", max(y1))), col = "red", lty = 1, cex = 0.8)
+```
+
+```{r}
+plot(y1,type = "l", col = "red", lwd = 5)
+for (j in 1:1000){
+  lines(y_pred[j,], type = "l")
+}
+```
+
+
+#### Deaths
+```{r, echo = FALSE}
+#6 Posterior predictive
+y = covid_us$deaths[covid_us$date<"2020-07-01"]/10000
+n = length(y)
+rho_plt2 <- seq(from = 0.95, to = 1.1, length.out=len_out)
+logsigma_plt2 <- seq(from = -3, to = 2, length.out=len_out)
+out3 <- outer(rho_plt2, logsigma_plt2, ar_post)
+set.seed(1)
+rho_col = rep(rho_plt2,len_out)
+logsigma_col = rep(logsigma_plt2,each = len_out)
+tmp = data.frame(out3 = as.vector(out3), rho_col = rho_col, logsigma_col = logsigma_col)
+ind = sample(1:length(tmp$out3), size = 1000, prob = exp(tmp$out3))
+
+y1 = covid_us$deaths[covid_us$date>"2020-06-30"]/10000
+n1 = length(y1)
+```
+
+```{r}
+y_pred = AR_pred(y1[1], rho_col, logsigma_col, n1-1)
+
+y_pred_summary = apply(y_pred,1,summary)
+y_pred_min = y_pred_summary[1,]
+y_pred_1Q = y_pred_summary[2,]
+y_pred_med = y_pred_summary[3,]
+y_pred_mean = y_pred_summary[4,]
+y_pred_3Q = y_pred_summary[5,]
+y_pred_max = y_pred_summary[6,]
+
+par(mfrow=c(2,3))
+hist(y_pred_min, breaks = 50, main = "min")
+abline(v = min(y1),col = "red")
+legend(-3000, 10000, legend = c(paste0("obs min =", min(y1))), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_1Q, breaks = 50, main = "1Q")
+abline(v = quantile(y1,prob = .25),col = "red")
+legend(-1000, 10000, legend = c(paste0("obs 1Q =", quantile(y1,.25))), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_med, breaks = 50, main = "med")
+abline(v = quantile(y1,prob = .55),col = "red")
+legend(0, 5000, legend = c(paste0("obs med =", median(y1))), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_mean, breaks = 50, main = "mean")
+abline(v = mean(y1),col = "red")
+legend(100, 10000, legend = c(paste0("obs mean =", mean(y1))), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_3Q, breaks = 50, main = "3Q")
+abline(v = quantile(y,prob = .75),col = "red")
+legend(1000, 10000, legend = c(paste0("obs 3Q =", quantile(y1,.75))), col = "red", lty = 1, cex = 0.8)
+
+hist(y_pred_max, breaks = 50, main = "max")
+abline(v = max(y1),col = "red")
+legend(1000, 10000, legend = c(paste0("obs max =", max(y1))), col = "red", lty = 1, cex = 0.8)
+```
+
+```{r}
+plot(y1,type = "l", col = "red", lwd = 5)
+for (j in 1:1000){
+  lines(y_pred[j,], type = "l")
+}
+```
+
+For both cases, the observed data is superposed on the predictive distributions. This is consistent with the previous argument that the model fits well to the data. Even though the invalid assumption about the Markovian property, the model suprisingly fits well to the data as well as predicts as well. 
+
+
+## 8 
+### Provide a non-technical explanation of your findings for an audience with minimal statistical training. Specifically, describe the AR(1) model in lay terms, explain whether or not this model provides good predictions in this context, and provide intuitive justifications for why the AR(1) model succeeds or fails in this context.
+
+AR(1) model is one of powerful ways that specifies the trajectory of the time-series data such as the covid-19 cases, and predicts the future outcomes. 
+AR(1) model inherently assume that the data at time $t$ only depends on the previous observations $t-1$, but even if the assumption is invalid, it can provide not only a good model fitting performances, but shows good performance when it comes to predictions. In this context, we fits the dat of covid-19 cases and deaths between 2020-01-21 and 2020-06-31 (n=162) to the AR(1) model and backtests its behavior of the diseases using the data between 2020-07-01 and 2020-08-25. The model explains well within both time periods. The model has a room for improvement as well by relaxing the assumption to more realistic ways, for instance, we consider AR(2)~AR(14) to reflect the fact that the covid-19 has 2 days to 14 days of incubation period.
+
+# Feedback
+#### (a) Does the instructor present material at an adequate pace during lecture (too slow/too fast)? 
+Yes
+
+#### (b) Does the instructor adequately address questions raised in class?
+Yes
+
+#### (c) What general material would you like the instructor to spend more time on?
+More advanced topics in Bayesian statistics such as ABC
+
+#### (d) Are the homework questions generally representative of material covered in lecture?
+Yes
+
+#### (e) Please name one concept that you are struggling with.
+N/A
+
+#### (f) Which topics/ideas/concepts in lecture were not well-explained? Brief comments are appreciated.
+I think most of topics were well-explained
+
+#### (g) Any further comments/questions/feedback?
+N/A
