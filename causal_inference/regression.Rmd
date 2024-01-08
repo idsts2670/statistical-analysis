@@ -1,0 +1,242 @@
+---
+title: "Regression for Causal Inference"
+author: "Satoshi Ido"
+output: html_document
+header-includes:
+  - "\\usepackage{listings}"
+  - "\\lstset{breaklines=true,breakatwhitespace=true}"
+---
+
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  tidy = TRUE
+)
+```
+
+```{r}
+library("ggplot2")
+library("tidyverse")
+library("MASS")
+library("broom")
+```
+
+# Data
+```{r warning=FALSE, message=FALSE, include=FALSE}
+email_data <- read.csv("/Users/satoshiido/Documents/programming/statistical-analysis/causal_inference/data/Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv")
+head(email_data)
+```
+
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# create the data w/o the womens E-Mail campaign
+male_df <- email_data %>% 
+  filter(segment != "Womens E-Mail") %>%
+  mutate(treatment = if_else(segment == "Mens E-Mail", 1, 0))
+
+# create the selection biased data
+## set the seed
+set.seed(1)
+
+## make half depending on the condition
+obs_rate_c <- 0.5
+obs_rate_t <- 0.5
+
+## create the biased data
+biased_data <- male_df %>%
+  mutate(
+    obs_rate_c = if_else(
+      (history > 300) | (recency < 6) | (channel == "Multichannel"), obs_rate_c, 1),
+    obs_rate_t = if_else(
+      (history > 300) | (recency < 6) | (channel == "Multichannel"), 1, obs_rate_t),
+    random_number = runif(n = NROW(male_df))) %>%
+    filter((treatment == 0 & random_number < obs_rate_c) | (treatment == 1 & random_number < obs_rate_t))
+
+head(biased_data, 20)
+```
+
+# Regression
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# regression
+biased_reg <- lm(data = biased_data, formula = spend ~ treatment + recency + history)
+summary(biased_reg)
+biased_reg <- lm(data = biased_data, formula = spend ~ treatment + history)
+summary(biased_reg)
+```
+
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# check only for treatment coefficient
+biased_reg_coef <- tidy(biased_reg)
+biased_reg_coef
+```
+
+# Biases in regression
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# Simple regression with RCT data
+rct_reg <- lm(data = male_df, formula = spend ~ treatment)
+rct_reg_coef <- summary(rct_reg) %>% tidy()
+
+# Simple regression with biased data
+nonrct_reg <- lm(data = biased_data, formula = spend ~ treatment)
+nonrct_reg_coef <- summary(nonrct_reg) %>% tidy()
+
+rct_reg_coef; nonrct_reg_coef
+```
+
+Regression with some covariates
+```{r warning=FALSE, message=FALSE, include=FALSE}
+nonrct_mreg <- lm(data = biased_data, formula = spend ~ treatment + recency + channel + history)
+nonrct_mreg_coef <- summary(nonrct_mreg)
+# suppress selection bias a little by controlling for covariates
+nonrct_mreg_coef
+```
+
+## OVB
+```{r warning=FALSE, message=FALSE, include=FALSE}
+formula_vec <- c(spend ~ treatment + recency + channel, # model A (alpha_i)
+                 spend ~ treatment + recency + channel + history, # model B (beta_i)
+                 history ~ treatment + channel + recency) # model C (gamma_i)
+names(formula_vec) <- paste("reg", LETTERS[1:3], sep = "_")
+
+# enframe the vector
+models <- formula_vec %>% enframe(name = "model_index", value = "formula")
+
+# map the regression
+df_models <- models %>%
+  mutate(model = map(.x = formula, .f = lm, data = biased_data)) %>%
+  mutate(lm_result = map(.x = model, .f = tidy))
+
+# unnest the result
+df_results <- df_models %>%
+  mutate(formula = as.character(formula)) %>%
+  dplyr::select(formula, model_index, lm_result) %>%
+  unnest(cols = c(lm_result))
+```
+
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# pull `treatment` parameters from the model A, B, C
+treatment_coef <- df_results %>%
+  filter(term == "treatment") %>%
+  pull(estimate)
+
+# pull `history` parameters from the model B
+history_coef <- df_results %>%
+  filter(model_index == "reg_B", term == "history") %>%
+  pull(estimate)
+
+# check OVB (beta_4 * gamma_1)
+OVB <- history_coef * treatment_coef[3]
+coef_gap <- treatment_coef[1] - treatment_coef[2]
+OVB; coef_gap
+coef_gap
+```
+
+## Post treatment bias
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# add the non-recommended variable to the model
+cor_visti_treatment <- lm(data = biased_data, formula = treatment ~ visit + recency + history + channel) %>% tidy()
+cor_visti_treatment
+```
+
+```{r warning=FALSE, message=FALSE, include=FALSE}
+bad_control_reg <- lm(data = biased_data, formula = spend ~ treatment + channel + recency + history + visit) %>% tidy()
+bad_control_reg
+```
+
+
+# Regression EDA with vouchers data
+```{r warning=FALSE, message=FALSE, include=FALSE}
+remotes::install_github("itamarcaspi/experimentdatar")
+library("experimentdatar")
+data(vouchers)
+vouchers
+```
+
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# prepare the regression
+## prepare the character vectors for the regression
+formula_x_base <- "VOUCH0"
+formula_x_covariate <- "SVY + HSVISIT + AGE + STRATA1 + STRATA2 + STRATA3 + STRATA4 + STRATA5 + STRATA6 + STRATAMS + D1993 + D1995 + D1997 + DMONTH1 + DMONTH2 + DMONTH3 + DMONTH4 + DMONTH5 + DMONTH6 + DMONTH7 + DMONTH8 + DMONTH9 + DMONTH10 + DMONTH11 + DMONTH12 + SEX2"
+formula_y <- c("TOTSCYRS","INSCHL","PRSCH_C","USNGSCH","PRSCHA_1","FINISH6","FINISH7","FINISH8","REPT6","REPT","NREPT",
+               "MARRIED","HASCHILD","HOURSUM","WORKING3")
+
+## create the simple regression formulas for each element in formula_y without covariates
+base_reg_formula <- paste(formula_y, "~", formula_x_base)
+names(base_reg_formula) <- paste(formula_y, "base", sep = "_")
+
+## create the multiple regression formulas for each element in formula_y with covariates
+covariate_reg_formula <- paste(formula_y, "~", formula_x_base, "+", formula_x_covariate)
+names(covariate_reg_formula) <- paste(formula_y, "covariate", sep = "_")
+
+## create the vectors for the models
+table3_formula <- c(base_reg_formula, covariate_reg_formula)
+
+## enframe the vectors
+models <- table3_formula %>% enframe(name = "model_index", value = "formula")
+
+# map the regression
+## extract the data
+regression_data <- vouchers %>% filter(TAB3SMPL == 1, BOG95SMP == 1)
+
+df_models <- models %>%
+  mutate(model = map(.x = formula, .f = lm, data = regression_data)) %>%
+  mutate(lm_result = map(.x = model, .f = tidy))
+
+# unnest the result
+df_results <- df_models %>%
+  mutate(formula = as.character(formula)) %>%
+  dplyr::select(formula, model_index, lm_result) %>%
+  unnest(cols = c(lm_result))
+```
+
+## Analysis of private school attendance and use of vouchers
+Was the voucher used and did it help private school enrollment?
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# enrollment and voucher usage (PRSCHA_1 = if the student used the voucher, USNGSCH = if the student enrolled the private school)
+using_voucher_results <- df_results %>%
+  filter(term == "VOUCH0", str_detect(model_index, "PRSCHA_1|USNGSCH")) %>%
+  dplyr::select(model_index, term, estimate, std.error, p.value)  %>%
+  arrange(model_index)
+using_voucher_results
+
+# plot the result
+using_voucher_results %>%
+  ggplot(aes(y = estimate, x = model_index)) +
+  geom_point() +
+  geom_errorbar(aes(ymax = estimate + std.error*1.96,
+                    ymin = estimate - std.error*1.96,
+                    width = 0.1)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5),
+        legend.position = "bottom",
+        plot.margin = margin(0.5,1,0.5,1, "cm"))
+```
+
+## Did voucher help the students to finish high school?
+ggplot
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# Extract the effect of VOUCH0 on PRSCH_C, INSCHL, FINISH6-8, REPT
+## PRSCH_C = show if the student still attend the private school after 3 yrs, 
+## INSCHL = show if the student still attend the school (public or pirvate) after 3 yrs, 
+## FINISH6-8 = show if the student was retained in the 6th grade.
+## REPT = show if the student was retained at least once before the survey
+going_private_results <- df_results %>%
+  filter(term == "VOUCH0",
+         str_detect(model_index, "PRSCH_C|INSCHL|FINISH|REPT")) %>%
+  dplyr::select(model_index, term, estimate, std.error, p.value) %>%
+  arrange(model_index)
+
+going_private_results %>%
+  filter(str_detect(model_index, "covariate")) %>%
+  ggplot(aes(y = estimate, x = model_index)) +
+  geom_point() +
+  geom_errorbar(aes(ymax = estimate + std.error*1.96,
+                    ymin = estimate - std.error*1.96,
+                    width = 0.1)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5),
+        legend.position = "bottom",
+        plot.margin = margin(0.5,1,0.5,1, "cm"))
+```
