@@ -292,23 +292,24 @@ df_results_male <- df_models %>%
   unnest(cols = c(lm_result))
 ```
 
-
+### Analysis of private school attendance and use of vouchers by gender
 ```{r warning=FALSE, message=FALSE}
 # visualize analysis results to school attendance trends
 ## extract results for PRSCHA_1, USNGSCH
 using_voucher_results_gender <- rbind(df_results_male, df_results_female) %>%
   filter(term == "VOUCH0", str_detect(model_index, "PRSCHA_1|USNGSCH")) %>%
   dplyr::select(gender, model_index, term, estimate, std.error, p.value) %>%
+  # reorder the outputed dataframe
   arrange(gender, model_index) %>%
   filter(str_detect(model_index, "covariate"))
 
-## ggplotによる可視化
+## ggplot
 using_voucher_results_gender %>%
   filter(str_detect(model_index, "covariate")) %>%
   ggplot(aes(y = estimate, x = model_index)) +
   geom_point() +
-  geom_errorbar(aes(ymax = estimate + std.error*1.96,
-                    ymin = estimate - std.error*1.96,
+  geom_errorbar(aes(ymax = estimate + std.error * 1.96,
+                    ymin = estimate - std.error * 1.96,
                     width = 0.1)) +
   geom_hline(yintercept = 0, linetype = 2) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
@@ -316,16 +317,20 @@ using_voucher_results_gender %>%
         legend.position = "bottom",
         plot.margin = margin(0.5,1,0.5,1, "cm")) +
   facet_grid(gender ~ .)
+```
 
-# 留年と通学年数への分析結果の可視化
-## PRSCH_C,INSCHL,REPT,TOTSCYRS,FINISHに対する分析結果を抜き出す
+
+### How Did voucher affect the students by gender to finish high school?
+```{r warning=FALSE, message=FALSE}
+# visualize analysis results to retention and years of school attendance
+## extract the results for PRSCH_C,INSCHL,REPT,TOTSCYRS,FINISH
 going_private_results_gender <- rbind(df_results_male, df_results_female) %>%
   filter(term == "VOUCH0",
          str_detect(model_index, "PRSCH_C|INSCHL|REPT|TOTSCYRS|FINISH")) %>%
-  select(gender, model_index, term, estimate, std.error, p.value) %>%
+  dplyr::select(gender, model_index, term, estimate, std.error, p.value) %>%
   arrange(model_index)
 
-## ggplotによる可視化
+## ggplot
 going_private_results_gender %>%
   filter(str_detect(model_index, "covariate")) %>%
   ggplot(aes(y = estimate, x = model_index)) +
@@ -340,15 +345,15 @@ going_private_results_gender %>%
         plot.margin = margin(0.5,1,0.5,1, "cm")) +
   facet_grid(gender ~ .)
 
-# 上記の分析で女子生徒の学業継続は学力・留年・当選（割引券）との相関関係が小さいことがわかったから、別の要因を探る
-# 労働時間に対する分析結果の可視化
-## HOURに対する分析結果を抜き出す
+# explore other factors because the above analysis showed that girls' academic persistence is less correlated with academic achievement, retention, and winning vouchers
+# visualize the results of the analysis against HOUR
+## extract the results of the analysis against HOUR
 working_hour_results_gender <- rbind(df_results_male, df_results_female) %>%
   filter(term == "VOUCH0", str_detect(model_index, "HOUR")) %>%
-  select(gender, model_index, term, estimate, std.error, p.value) %>%
+  dplyr::select(gender, model_index, term, estimate, std.error, p.value) %>%
   arrange(gender, model_index)
 
-## ggplotによる可視化
+## ggplot
 working_hour_results_gender %>%
   filter(str_detect(model_index, "covariate")) %>%
   ggplot(aes(y = estimate, x = model_index)) +
