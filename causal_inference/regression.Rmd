@@ -24,12 +24,12 @@ library("broom")
 ```
 
 # Data
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 email_data <- read.csv("/Users/satoshiido/Documents/programming/statistical-analysis/causal_inference/data/Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv")
 head(email_data)
 ```
 
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 # create the data w/o the womens E-Mail campaign
 male_df <- email_data %>% 
   filter(segment != "Womens E-Mail") %>%
@@ -57,7 +57,7 @@ head(biased_data, 20)
 ```
 
 # Regression
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 # regression
 biased_reg <- lm(data = biased_data, formula = spend ~ treatment + recency + history)
 summary(biased_reg)
@@ -65,19 +65,19 @@ biased_reg <- lm(data = biased_data, formula = spend ~ treatment + history)
 summary(biased_reg)
 ```
 
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 # check only for treatment coefficient
 biased_reg_coef <- tidy(biased_reg)
 biased_reg_coef
 ```
 
 # Biases in regression
-```{r warning=FALSE, message=FALSE, include=FALSE}
-# Simple regression with RCT data
+```{r warning=FALSE, message=FALSE}
+# simple regression with RCT data
 rct_reg <- lm(data = male_df, formula = spend ~ treatment)
 rct_reg_coef <- summary(rct_reg) %>% tidy()
 
-# Simple regression with biased data
+# simple regression with biased data
 nonrct_reg <- lm(data = biased_data, formula = spend ~ treatment)
 nonrct_reg_coef <- summary(nonrct_reg) %>% tidy()
 
@@ -85,7 +85,7 @@ rct_reg_coef; nonrct_reg_coef
 ```
 
 Regression with some covariates
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 nonrct_mreg <- lm(data = biased_data, formula = spend ~ treatment + recency + channel + history)
 nonrct_mreg_coef <- summary(nonrct_mreg)
 # suppress selection bias a little by controlling for covariates
@@ -114,7 +114,7 @@ df_results <- df_models %>%
   unnest(cols = c(lm_result))
 ```
 
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 # pull `treatment` parameters from the model A, B, C
 treatment_coef <- df_results %>%
   filter(term == "treatment") %>%
@@ -129,31 +129,30 @@ history_coef <- df_results %>%
 OVB <- history_coef * treatment_coef[3]
 coef_gap <- treatment_coef[1] - treatment_coef[2]
 OVB; coef_gap
-coef_gap
 ```
 
 ## Post treatment bias
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 # add the non-recommended variable to the model
 cor_visti_treatment <- lm(data = biased_data, formula = treatment ~ visit + recency + history + channel) %>% tidy()
 cor_visti_treatment
 ```
 
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 bad_control_reg <- lm(data = biased_data, formula = spend ~ treatment + channel + recency + history + visit) %>% tidy()
 bad_control_reg
 ```
 
 
 # Regression EDA with vouchers data
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 remotes::install_github("itamarcaspi/experimentdatar")
 library("experimentdatar")
 data(vouchers)
 vouchers
 ```
 
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 # prepare the regression
 ## prepare the character vectors for the regression
 formula_x_base <- "VOUCH0"
@@ -192,7 +191,7 @@ df_results <- df_models %>%
 
 ## Analysis of private school attendance and use of vouchers
 Was the voucher used and did it help private school enrollment?
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 # enrollment and voucher usage (PRSCHA_1 = if the student used the voucher, USNGSCH = if the student enrolled the private school)
 using_voucher_results <- df_results %>%
   filter(term == "VOUCH0", str_detect(model_index, "PRSCHA_1|USNGSCH")) %>%
@@ -215,8 +214,8 @@ using_voucher_results %>%
 
 ## Did voucher help the students to finish high school?
 ggplot
-```{r warning=FALSE, message=FALSE, include=FALSE}
-# Extract the effect of VOUCH0 on PRSCH_C, INSCHL, FINISH6-8, REPT
+```{r warning=FALSE, message=FALSE}
+# extract the effect of VOUCH0 on PRSCH_C, INSCHL, FINISH6-8, REPT
 ## PRSCH_C = show if the student still attend the private school after 3 yrs, 
 ## INSCHL = show if the student still attend the school (public or pirvate) after 3 yrs, 
 ## FINISH6-8 = show if the student was retained in the 6th grade.
@@ -239,4 +238,128 @@ going_private_results %>%
         plot.title = element_text(hjust = 0.5),
         legend.position = "bottom",
         plot.margin = margin(0.5,1,0.5,1, "cm"))
+```
+
+## Difference in Effectiveness by Gender
+Replicate Angrist (2002) Table 4 & 6 bogota 1995
+```{r warning=FALSE, message=FALSE}
+# create the data for table 4
+data_tbl4_bog95 <- vouchers %>%
+  filter(BOG95SMP == 1, TAB3SMPL == 1,
+         !is.na(SCYFNSH), !is.na(FINISH6), !is.na(PRSCHA_1), 
+         !is.na(REPT6), !is.na(NREPT), !is.na(INSCHL), 
+         !is.na(FINISH7),!is.na(PRSCH_C), !is.na(FINISH8), !is.na(PRSCHA_2), 
+         !is.na(TOTSCYRS), !is.na(REPT)
+         ) %>%
+  dplyr::select(VOUCH0, SVY, HSVISIT, DJAMUNDI, PHONE, AGE,
+         STRATA1:STRATA6, STRATAMS, DBOGOTA, D1993, D1995, D1997,
+         DMONTH1:DMONTH12, SEX_MISS, FINISH6, FINISH7, FINISH8,
+         REPT6, REPT, NREPT, SEX2, TOTSCYRS, MARRIED, HASCHILD,
+         HOURSUM,WORKING3, INSCHL,PRSCH_C,USNGSCH,PRSCHA_1)
+```
+
+Women data
+```{r warning=FALSE, message=FALSE}
+# exctract women data
+regression_data <- data_tbl4_bog95 %>% filter(SEX2 == 0)
+
+# run the regression all together
+df_models <- models %>%
+  mutate(model = map(.x = formula, .f = lm, data = regression_data)) %>%
+  mutate(lm_result = map(.x = model, .f = tidy))
+
+# format the result
+df_results_female <- df_models %>%
+  mutate(formula = as.character(formula), gender = "female") %>%
+  dplyr::select(formula, model_index, lm_result, gender) %>%
+  unnest(cols = c(lm_result))
+```
+
+Men data
+```{r warning=FALSE, message=FALSE}
+# extract the men data
+regression_data <- data_tbl4_bog95 %>% filter(SEX2 == 1)
+
+# run the regression all together
+df_models <- models %>%
+  mutate(model = map(.x = formula, .f = lm, data = regression_data)) %>%
+  mutate(lm_result = map(.x = model, .f = tidy))
+
+# format the result
+df_results_male <- df_models %>%
+  mutate(formula = as.character(formula), gender = "male") %>%
+  dplyr::select(formula, model_index, lm_result, gender) %>%
+  unnest(cols = c(lm_result))
+```
+
+
+```{r warning=FALSE, message=FALSE}
+# visualize analysis results to school attendance trends
+## extract results for PRSCHA_1, USNGSCH
+using_voucher_results_gender <- rbind(df_results_male, df_results_female) %>%
+  filter(term == "VOUCH0", str_detect(model_index, "PRSCHA_1|USNGSCH")) %>%
+  dplyr::select(gender, model_index, term, estimate, std.error, p.value) %>%
+  arrange(gender, model_index) %>%
+  filter(str_detect(model_index, "covariate"))
+
+## ggplotによる可視化
+using_voucher_results_gender %>%
+  filter(str_detect(model_index, "covariate")) %>%
+  ggplot(aes(y = estimate, x = model_index)) +
+  geom_point() +
+  geom_errorbar(aes(ymax = estimate + std.error*1.96,
+                    ymin = estimate - std.error*1.96,
+                    width = 0.1)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5),
+        legend.position = "bottom",
+        plot.margin = margin(0.5,1,0.5,1, "cm")) +
+  facet_grid(gender ~ .)
+
+# 留年と通学年数への分析結果の可視化
+## PRSCH_C,INSCHL,REPT,TOTSCYRS,FINISHに対する分析結果を抜き出す
+going_private_results_gender <- rbind(df_results_male, df_results_female) %>%
+  filter(term == "VOUCH0",
+         str_detect(model_index, "PRSCH_C|INSCHL|REPT|TOTSCYRS|FINISH")) %>%
+  select(gender, model_index, term, estimate, std.error, p.value) %>%
+  arrange(model_index)
+
+## ggplotによる可視化
+going_private_results_gender %>%
+  filter(str_detect(model_index, "covariate")) %>%
+  ggplot(aes(y = estimate, x = model_index)) +
+  geom_point() +
+  geom_errorbar(aes(ymax = estimate + std.error*1.96,
+                    ymin = estimate - std.error*1.96,
+                    width = 0.1)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5),
+        legend.position = "bottom",
+        plot.margin = margin(0.5,1,0.5,1, "cm")) +
+  facet_grid(gender ~ .)
+
+# 上記の分析で女子生徒の学業継続は学力・留年・当選（割引券）との相関関係が小さいことがわかったから、別の要因を探る
+# 労働時間に対する分析結果の可視化
+## HOURに対する分析結果を抜き出す
+working_hour_results_gender <- rbind(df_results_male, df_results_female) %>%
+  filter(term == "VOUCH0", str_detect(model_index, "HOUR")) %>%
+  select(gender, model_index, term, estimate, std.error, p.value) %>%
+  arrange(gender, model_index)
+
+## ggplotによる可視化
+working_hour_results_gender %>%
+  filter(str_detect(model_index, "covariate")) %>%
+  ggplot(aes(y = estimate, x = model_index)) +
+  geom_point() 
+  geom_errorbar(aes(ymax = estimate + std.error*1.96,
+                    ymin = estimate - std.error*1.96,
+                    width = 0.1)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5),
+        legend.position = "bottom",
+        plot.margin = margin(0.5,1,0.5,1, "cm")) +
+  facet_grid(. ~ gender)
 ```
