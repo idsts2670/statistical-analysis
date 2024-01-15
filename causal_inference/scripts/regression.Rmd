@@ -1,7 +1,7 @@
 ---
 title: "Regression for Causal Inference"
 author: "Satoshi Ido"
-output: html_document
+output: pdf_document
 header-includes:
   - "\\usepackage{listings}"
   - "\\lstset{breaklines=true,breakatwhitespace=true}"
@@ -94,9 +94,10 @@ nonrct_mreg_coef
 
 ## OVB
 ```{r warning=FALSE, message=FALSE, include=FALSE}
-formula_vec <- c(spend ~ treatment + recency + channel, # model A (alpha_i)
-                 spend ~ treatment + recency + channel + history, # model B (beta_i)
-                 history ~ treatment + channel + recency) # model C (gamma_i)
+# first model -> model A (alpha_i), second model -> # model B (beta_i), third model -> model C (gamma_i)
+formula_vec <- c(spend ~ treatment + recency + channel, 
+                 spend ~ treatment + recency + channel + history,
+                 history ~ treatment + channel + recency)
 names(formula_vec) <- paste("reg", LETTERS[1:3], sep = "_")
 
 # enframe the vector
@@ -357,7 +358,7 @@ working_hour_results_gender <- rbind(df_results_male, df_results_female) %>%
 working_hour_results_gender %>%
   filter(str_detect(model_index, "covariate")) %>%
   ggplot(aes(y = estimate, x = model_index)) +
-  geom_point() 
+  geom_point() +
   geom_errorbar(aes(ymax = estimate + std.error*1.96,
                     ymin = estimate - std.error*1.96,
                     width = 0.1)) +
