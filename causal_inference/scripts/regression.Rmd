@@ -23,9 +23,34 @@ library("MASS")
 library("broom")
 ```
 
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# Create the input_dir (input directory)
+INPUT_DIR <- "/Users/satoshiido/Documents/programming/statistical-analysis/causal_inference/data"
+
+# If INPUT_DIR has not been created yet, create it
+if (!dir.exists(INPUT_DIR)) {
+  dir.create(INPUT_DIR)
+}
+
+# Create the output_dir (output directory)
+OUTPUT_DIR <- "/Users/satoshiido/Documents/programming/statistical-analysis/causal_inference/output"
+
+# If OUTPUT_DIR has not been created yet, create it
+if (!dir.exists(OUTPUT_DIR)) {
+  dir.create(OUTPUT_DIR)
+}
+
+# Read CSV files using a function to specify the directory automatically
+read_csv <- function(name, ...) {
+  path <- file.path(INPUT_DIR, paste0(name, ".csv"))
+  print(paste("Load:", path))
+  return(read.csv(path, ...))
+}
+```
+
 # Data
 ```{r warning=FALSE, message=FALSE}
-email_data <- read.csv("/Users/satoshiido/Documents/programming/statistical-analysis/causal_inference/data/Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv")
+email_data <- read_csv("Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20")
 head(email_data)
 ```
 

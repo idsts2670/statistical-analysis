@@ -24,8 +24,7 @@ library("MASS")
 
 ```{r warning=FALSE, message=FALSE, include=FALSE}
 # Create the input_dir (input directory)
-current_note_path <- getwd()
-INPUT_DIR <- file.path(current_note_path, "causal_inference/data")
+INPUT_DIR <- "/Users/satoshiido/Documents/programming/statistical-analysis/causal_inference/data"
 
 # If INPUT_DIR has not been created yet, create it
 if (!dir.exists(INPUT_DIR)) {
@@ -33,7 +32,7 @@ if (!dir.exists(INPUT_DIR)) {
 }
 
 # Create the output_dir (output directory)
-OUTPUT_DIR <- file.path(current_note_path, "causal_inference/output")
+OUTPUT_DIR <- "/Users/satoshiido/Documents/programming/statistical-analysis/causal_inference/output"
 
 # If OUTPUT_DIR has not been created yet, create it
 if (!dir.exists(OUTPUT_DIR)) {
