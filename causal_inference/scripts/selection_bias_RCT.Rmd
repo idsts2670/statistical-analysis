@@ -22,7 +22,7 @@ library("tidyverse")
 library("MASS")
 ```
 
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 # Create the input_dir (input directory)
 INPUT_DIR <- "/Users/satoshiido/Documents/programming/statistical-analysis/causal_inference/data"
 
@@ -59,13 +59,13 @@ ATE: \(\tau = E[Y(1) - Y(0)]\)
 \(E[Y(1) - Y(0) \mid Z=1] + E[Y(0) \mid Z=1] - E[Y(0) \mid Z=0]\)
 
 ## RCT : mail marketing example without selection bias 
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 email_data <- read_csv("Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20")
 head(email_data)
 ```
 
 Just to see the comparison of the sample of Mens E-Mail campaign or not, delete the Womens E-Mail campaign from the data set.
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 # create the data w/o the womens E-Mail campaign
 male_df <- email_data %>% 
   filter(segment != "Womens E-Mail") %>%
@@ -74,7 +74,7 @@ head(male_df)
 ```
 
 Aggregation and comparison
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 summary_by_segement <- male_df %>%
   group_by(treatment) %>%
   # mean of conversion by treatment
@@ -87,7 +87,7 @@ summary_by_segement
 ```
 
 t-test
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 # pull the data with Men's E-Mail Campaign
 mens_mail <- male_df %>%
   filter(treatment == 1) %>%
@@ -103,7 +103,7 @@ rct_ttest
 ```
 
 ## RCT : mail marketing example with selection bias
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 # create the selection biased data
 ## set the seed
 set.seed(1)
@@ -121,11 +121,11 @@ biased_data <- male_df %>%
       (history > 300) | (recency < 6) | (channel == "Multichannel"), 1, obs_rate_t),
     random_number = runif(n = NROW(male_df))) %>%
     filter((treatment == 0 & random_number < obs_rate_c) | (treatment == 1 & random_number < obs_rate_t))
-head(biased_data, 20)
+head(biased_data)
 ```
 
 Aggregation and comparison
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 summary_by_segment_biased <- biased_data %>%
   group_by(treatment) %>%
   summarise(conversion_rate = mean(conversion),
@@ -136,7 +136,7 @@ summary_by_segment_biased
 ```
 
 t-test
-```{r warning=FALSE, message=FALSE, include=FALSE}
+```{r warning=FALSE, message=FALSE}
 # purchase data with mail campaign
 mens_mail_biased <- biased_data %>%
   filter(treatment == 1) %>%
