@@ -1,0 +1,79 @@
+---
+title: "HW1"
+author: "Satoshi Ido"
+date: 17 January 2024
+output: pdf_document
+header-includes:
+  - "\\usepackage{listings}"
+  - "\\lstset{breaklines=true,breakatwhitespace=true}"
+---
+
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  tidy = TRUE
+)
+```
+
+```{r}
+library("ggplot2")
+library("tidyverse")
+library("MASS")
+library("broom")
+```
+
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# Create the input_dir (input directory)
+INPUT_DIR <- "/Users/satoshiido/Documents/programming/statistical-analysis/582/hw1/data"
+
+# If INPUT_DIR has not been created yet, create it
+if (!dir.exists(INPUT_DIR)) {
+  dir.create(INPUT_DIR)
+}
+
+# Create the output_dir (output directory)
+OUTPUT_DIR <- "/Users/satoshiido/Documents/programming/statistical-analysis/582/hw1/output"
+
+# If OUTPUT_DIR has not been created yet, create it
+if (!dir.exists(OUTPUT_DIR)) {
+  dir.create(OUTPUT_DIR)
+}
+
+# Read CSV files using a function to specify the directory automatically
+read_csv <- function(name, ...) {
+  path <- file.path(INPUT_DIR, paste0(name, ".csv"))
+  print(paste("Load:", path))
+  return(read.csv(path, ...))
+}
+```
+
+```{r warning=FALSE, message=FALSE}
+# read data
+df <- read_csv("diesel")
+colnames(df) <- c("run", "speed_rpm", "load_lb", "alchol_percent", "injection_timing", "ignition_delay_Cao", "temp_oR", "pressure_psi")
+head(df)
+is.character(df$injection_timing)
+```
+
+```{r warning=FALSE, message=FALSE}
+# count the number of levels in speed_rpm
+value_counts <- df %>% count(speed_rpm)
+print(value_counts)
+
+# count the number of levels in load_lb
+value_counts <- df %>% count(load_lb)
+print(value_counts)
+
+# count the number of levels in alchol_percent
+value_counts <- df %>% count(alchol_percent)
+print(value_counts)
+# Create a histogram
+hist(df$alchol_percent, main = "Histogram of Alcohol Percent", xlab = "Alcohol Percent", col = "blue", border = "black")
+```
+
+qqplot or histogram to check normality
+```{r warning=FALSE, message=FALSE}
+
+```
