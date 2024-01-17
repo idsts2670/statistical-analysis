@@ -113,4 +113,13 @@ PSM_result <- matched_data %>%
 # Inverse Probability Weighting; IPW
 Using the propensity scores as sample weights, we estimate the expected value of the outcome with intervention (E[Y(1)]) and the expected value of the outcome without intervention (E[Y(0)]) for the given data as a whole. The effect is then estimated by subtracting these expected values
 PW uses the value of the propensity score to strech the observed sample size. This increases the number of samples with small Y(1) values, which are relatively difficult to observe due to Z = 0, thus bringing the calculated average closer to the original expected value.
+
 ```{r warning=FALSE, message=FALSE}
+library("WeightIt")
+
+# perform inverse probability weighting (weightit -> ATE)
+weighting <- weightit(formula = treatment ~ recency + history + channel,
+  data = biased_data,
+  method = "ps",
+  estimand = "ATE")
+```
