@@ -81,7 +81,7 @@ head(biased_data)
 
 # Propensity Score Estimation
 ```{r warning=FALSE, message=FALSE}
-# create the propensity score model using logistic regression
+# create the propensity score model using logistic regression, which returns the probability of Y = 1
 ps_model <- glm(data = biased_data, formula = treatment ~ recency + history + channel, family = binomial)
 ```
 
@@ -122,4 +122,11 @@ weighting <- weightit(formula = treatment ~ recency + history + channel,
   data = biased_data,
   method = "ps",
   estimand = "ATE")
+
+# estimate the effect based on the weighted data
+IPW_result <- biased_data %>%
+  lm(formula = spend ~ treatment, weights = weighting$weights) %>%
+  tidy()
+
+IPW_result
 ```
