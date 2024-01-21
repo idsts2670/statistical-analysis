@@ -1,7 +1,8 @@
 ---
 title: "Propensity Score Matching and Analysis"
 author: "Satoshi Ido"
-output: html_document
+output: pdf_document
+pandoc_args: ["--lua-filter=color-text.lua"]
 header-includes:
   - "\\usepackage{listings}"
   - "\\lstset{breaklines=true,breakatwhitespace=true}"
@@ -20,9 +21,11 @@ library("ggplot2")
 library("tidyverse")
 library("MASS")
 library("broom")
+library("knitr")
 ```
 
 ```{r warning=FALSE, message=FALSE, include=FALSE}
+
 # Create the input_dir (input directory)
 INPUT_DIR <- "/Users/satoshiido/Documents/programming/statistical-analysis/causal_inference/data"
 
@@ -47,9 +50,8 @@ read_csv <- function(name, ...) {
 }
 ```
 
-```{r warning=FALSE, message=FALSE}
-email_data <- read_csv("Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20")
-head(email_data)
+```{r warning=FALSE, message=FALSE, echo=FALSE}
+email_data <- read_csv("Kevin_Hillstrom_MineThatData_E-MailAnalytics")
 ```
 
 ```{r warning=FALSE, message=FALSE}
@@ -145,6 +147,105 @@ love.plot(m_near, threshold = 0.1)
 love.plot(weighting, threshold = 0.1)
 ```
 
-
 Analysis using propensity scores has the practical advantage of eliminating the need for modeling for "Y" and only requiring surveys or interviews regarding how "Z" is determined, which is easier to obtain information on.
 Therefore, if you have a wealth of information on how the value of "Y" is determined, there are significant advantages to using regression analysis.
+
+# estimate of the ML based mail-marketing effect
+
+create the data
+```{r warning=FALSE, message=FALSE}
+# set the seed
+set.seed(1)
+
+# generates a random number to include in the training data
+train_flag <- sample(NROW(male_df), NROW(male_df)/2, replace = FALSE)
+
+# create the past data (train data) from the non-treatment group
+male_df_train <- male_df[train_flag, ] %>% filter(treatment == 0)
+
+# create the future data (test data)
+male_df_test <- male_df[-train_flag, ]
+
+# builid the model to predict the probability of the sales among the non-treatment group
+predict_model <- glm(
+  data = male_df_train,
+  formula = conversion ~ recency + history_segment + channel + zip_code,
+  family = binomial
+)
+```
+
+In the future data, only the samples from which interventions actually took place that were eligible for treatment in the process described above are retained, and the rest are deleted.
+Similarly, from the non-intervention data, only the samples that were not eligible for delivery in the same process are retained, and the rest are deleted. These operations are performed using `filter()`.
+```{r warning=FALSE, message=FALSE}
+## obtain the probability of the marketing based on the probability of the sales occurring
+pred_cv <- predict(predict_model, newdata = male_df_test, type = "response")
+pred_cv_rank <- percent_rank(pred_cv)
+
+## determine email marketing probability based on probability of sales occurring (randomly somewhat)
+mail_assign <- sapply(pred_cv_rank, rbinom, n = 1, size = 1)
+
+## create a mail marketing log
+ml_male_df <- male_df_test %>%
+  mutate(mail_assign = mail_assign, ps = pred_cv_rank) %>%
+  filter((treatment == 1 & mail_assign == 1) | (treatment == 0 & mail_assign == 0))
+head(ml_male_df)
+```
+
+As we know the idea of selection bias, this approach creates the selection bias in the evaluation of the effect of the mail marketing.
+
+```{r warning=FALSE, message=FALSE, echo=FALSE} 
+knitr::include_graphics("/Users/satoshiido/Documents/programming/statistical-analysis/causal_inference/pic/ml_marketing_image.png")
+```
+
+# RCT and comparison in mean treatment effects
+mean difference in the effect of the RCT
+```{r warning=FALSE, message=FALSE}
+# check the mean difference 
+rct_male_lm <- lm(data = male_df_test, formula = spend ~ treatment) %>% tidy()
+rct_male_lm
+```
+
+mean difference in the effect with selection bias
+Since the model based marketing decision biased the distribution of the emails to users who are more likely to generate sales, the estimated values are considered to be affected by the selection bias.
+```{r warning=FALSE, message=FALSE}
+ml_male_lm <- lm(data = ml_male_df, formula = spend ~ treatment) %>% tidy()
+ml_male_lm
+```
+
+# Propensity Score Matching and Analysis
+Propsensity Score Matching estimate
+```{r warning=FALSE, message=FALSE}
+library("Matching")
+PSM_result <- Match(
+  Y = ml_male_df$spend,
+  Tr = ml_male_df$treatment,
+  X = ml_male_df$ps,
+  estimand = "ATT"
+)
+summary(PSM_result)
+```
+
+IPW estimate
+```{r warning=FALSE, message=FALSE}
+W.out <- weightit(treatment ~ recency + history_segment + channel + zip_code,
+  data = ml_male_df,
+  ps = ml_male_df$ps,
+  method = "ps",
+  estimand = "ATE")
+
+# check the balance in the covariates
+love.plot(W.out, threshold = 0.1)
+
+# estimate the effect based on the weighted data
+IPW_result <- ml_male_df %>%
+  lm(data = ., spend ~ treatment, weights = W.out$weights) %>%
+  tidy()
+
+IPW_result
+```
+
+In this example, email delivery was determined somewhat randomly based on predicted purchases.
+However, during the actual analysis, it is possible that there is no randomness in the decision to deliver emails.
+For example, if the predicted value is above a certain level, the email will be delivered, but if it is below a certain level, the email will not be delivered.
+In this case, the propensity score will always be 1 or 0, and thus cannot be analyzed using methods such as propensity score matching or IPW.
+In such a case, it is better to use Regression Discontinuity Design (RDD).
