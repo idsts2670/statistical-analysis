@@ -130,3 +130,21 @@ IPW_result <- biased_data %>%
 
 IPW_result
 ```
+
+Propensity scores were interpreted as being important if their explanatory power for the data exceeded a certain value, and it was desirable for indicators such as the c statistic to exceed a certain value.
+In recent years, however, there is a general view that it is important to have a good balance of covariates in the data after weighting or matching using propensity scores (Stuart, 2010).
+
+# Balance Check
+```{r warning=FALSE, message=FALSE}
+library("cobalt")
+
+# covariates balacne check with matched data
+love.plot(m_near, threshold = 0.1)
+
+# covariates balance check with weighted data
+love.plot(weighting, threshold = 0.1)
+```
+
+
+Analysis using propensity scores has the practical advantage of eliminating the need for modeling for "Y" and only requiring surveys or interviews regarding how "Z" is determined, which is easier to obtain information on.
+Therefore, if you have a wealth of information on how the value of "Y" is determined, there are significant advantages to using regression analysis.
