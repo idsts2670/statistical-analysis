@@ -1,0 +1,17 @@
+---
+title: "HW5 Project2"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r warning = FALSE}
+library("tidyverse")
+library("broom")
+library("readxl")
+library("ggplot2")
+library("psych")
+```
