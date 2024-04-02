@@ -139,7 +139,7 @@ model <- aov(Production ~ Block + Treatment + Days_in_Trt + Block:Days_in_Trt, d
 summary(model)
 ```
 
-Post-hoc Analysis
+Post-hoc Analysisc
 After fitting the model, I would use emmeans functions to explore the means. That is material from week 2
 and reviewed here.
 ```{r warning = FALSE}
@@ -266,6 +266,7 @@ qqline(resid(lme_model_bc), col = "red")
 
 summary(lme_model_bc)
 ```
+
 ```{r warning = FALSE}
 summary(gls_v1_2)
 summary(gls_v2)
