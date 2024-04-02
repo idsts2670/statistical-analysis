@@ -14,6 +14,7 @@ library("readxl")
 library("ggplot2")
 library("psych")
 library("MASS")
+library("psych")
 ```
 
 ```{r warning = FALSE}
@@ -21,8 +22,46 @@ library("MASS")
 current_note_path <- getwd()
 main_path <- file.path(current_note_path, "statistical-analysis/582/Applied_MS_Exam/")
 df <- read_csv(file.path(main_path, "data/Prius_Prime_v2.csv"))
-df2 <- df[-1, ]
 head(df)
+```
+
+```{r warning = FALSE}
+df2 <- df[-1, ]
+df2 <- df2 %>% mutate_at(vars(Month, day_of_week), factor)
+```
+
+# Plot
+```{r warning = FALSE}
+pairs(df2[, c("interval_miles", "interval_miles_lag", "interval_gallons", "interval_gallons_lag", "Month", "day_of_week")])
+cor_matrix <- cor(df2[, c("interval_miles", "interval_miles_lag", "interval_gallons", "interval_gallons_lag")])
+print(cor_matrix)
+```
+
+```{r warning = FALSE}
+hist(df2$interval_gallons, main = "Histogram of Interval Gallons", xlab = "Interval Gallons")
+df2$interval_gallons_log <- log(df2$interval_gallons)
+hist(df2$interval_gallons_log, main = "Histogram of Interval Gallons log", xlab = "Interval Gallons")
+
+hist(df2$interval_miles, main = "Histogram of Interval Miles", xlab = "Interval miles")
+df2$interval_miles_log <- log(df2$interval_miles)
+hist(df2$interval_miles_log, main = "Histogram of Interval Miles log", xlab = "Interval Miles")
+```
+
+```{r warning = FALSE}
+# https://tinyurl.com/2y644l4w
+# Consider checking scatterplots of the explanatory variables against the response variable to see if there are apparent non-linear patterns that are not being modeled.
+explanatory_vars <- c('overall_miles_lag', 'interval_gallons_lag', 'interval_miles_lag', 'Month', 'day_of_week')
+
+for (var in explanatory_vars) {
+  p <- ggplot(df2, aes(x = !!sym(var), y = interval_gallons)) +
+    geom_point() +
+    geom_smooth(method = 'loess', formula = y ~ x) + # Explicitly state the formula
+    labs(title = paste("Scatterplot of interval Gallons vs", var),
+         x = var,
+         y = 'interval Gallons') +
+    theme_minimal()
+  print(p)
+}
 ```
 
 
@@ -34,15 +73,15 @@ t.test(df$interval_MPG, df$interval_MPG_hand_calculated, paired = TRUE, alternat
 
 # Model
 ## Linear Regression
+Build a faction to run a linear regression model.
 ```{r warning = FALSE}
 measure_rmse <- function(y_true, y_pred) {
   return(sqrt(mean(y_true - y_pred)^2))
 }
-
-run_linear_regression <- function(train, test) {
+run_linear_regression_gallons <- function(train, test) {
   set.seed(49)
-  
-  model <- lm(interval_miles ~ overall_miles_lag + interval_gallons_lag + interval_miles_lag + Year + Month + day_of_week, data = train)
+
+  model <- lm(interval_gallons ~ interval_gallons_lag + log(interval_miles_lag) + Month, data = train)
   
   # print(paste('coefficient = ', coef(model)))
   # print(paste('intercept = ', coef(model)[1]))
@@ -51,14 +90,14 @@ run_linear_regression <- function(train, test) {
   y_pred <- predict(model, newdata = test)
   
   y_train_pred <- predict(model, newdata = train)
-  rmse_train <- measure_rmse(train$interval_miles, y_train_pred)
-  rmse_test <- measure_rmse(test$interval_miles, y_pred)
+  rmse_train <- measure_rmse(train$interval_gallons, y_train_pred)
+  rmse_test <- measure_rmse(test$interval_gallons, y_pred)
   
   print(paste('The RMSE of the train that we will try to diminish is ', round(rmse_train, 4)))
   print(paste('The RMSE of the test is ', round(rmse_test, 4)))
   
   print(paste('r^2 train data: ', summary(model)$adj.r.squared))
-  print(paste('r^2 test data: ', summary(lm(interval_miles ~ y_pred, data = test))$adj.r.squared))
+  print(paste('r^2 test data: ', summary(lm(interval_gallons ~ y_pred, data = test))$adj.r.squared))
   
   # Normality check
   residuals <- residuals(model)
@@ -74,7 +113,7 @@ run_linear_regression <- function(train, test) {
 
   return (
     ggplot() +
-    geom_point(aes(x = y_pred, y = y_pred - test$interval_miles), color = '#1f77b4') +
+    geom_point(aes(x = y_pred, y = y_pred - test$interval_gallons), color = '#1f77b4') +
     geom_hline(yintercept = 0, color = '#d62728') +
     ggtitle('Residual Plot') +
     xlab('Predicted Values') +
@@ -83,6 +122,51 @@ run_linear_regression <- function(train, test) {
   )
 
 }
+# run_linear_regression_miles <- function(train, test) {
+#   set.seed(49)
+  
+#   # model <- lm(interval_miles ~ overall_miles_lag + interval_gallons_lag + interval_miles_lag + Month, data = train)
+#   model <- lm(interval_miles ~ log(interval_gallons_lag) + log(interval_miles_lag) + Month, data = train)
+  
+#   # print(paste('coefficient = ', coef(model)))
+#   # print(paste('intercept = ', coef(model)[1]))
+#   print(summary(model))
+  
+#   y_pred <- predict(model, newdata = test)
+  
+#   y_train_pred <- predict(model, newdata = train)
+#   rmse_train <- measure_rmse(train$interval_miles, y_train_pred)
+#   rmse_test <- measure_rmse(test$interval_miles, y_pred)
+  
+#   print(paste('The RMSE of the train that we will try to diminish is ', round(rmse_train, 4)))
+#   print(paste('The RMSE of the test is ', round(rmse_test, 4)))
+  
+#   print(paste('r^2 train data: ', summary(model)$adj.r.squared))
+#   print(paste('r^2 test data: ', summary(lm(interval_miles ~ y_pred, data = test))$adj.r.squared))
+  
+#   # Normality check
+#   residuals <- residuals(model)
+#   shapiro_test <- shapiro.test(residuals)
+#   print(paste('Shapiro-Wilk normality test p-value: ', shapiro_test$p.value))
+
+#   # Residual plot
+#   plot(fitted(model), residuals(model))
+  
+#   # Q-Q plot
+#   qqnorm(resid(model))
+#   qqline(resid(model), col = "red")
+
+#   return (
+#     ggplot() +
+#     geom_point(aes(x = y_pred, y = y_pred - test$interval_miles), color = '#1f77b4') +
+#     geom_hline(yintercept = 0, color = '#d62728') +
+#     ggtitle('Residual Plot') +
+#     xlab('Predicted Values') +
+#     ylab('Residuals') +
+#     theme_minimal()
+#   )
+
+# }
 ```
 
 ## Data Split
@@ -94,50 +178,108 @@ test <- df2[df2$Year >= 2023, ]
 
 ## Run Linear Regression
 ```{r warning = FALSE}
-run_linear_regression(train, test)
+run_linear_regression_gallons(train, test)
 ```
 
-## Data Split 2
+### Data Split 2
 Exclue the data in 2020 because there were pandemic and the data is not reliable.
 ```{r warning = FALSE}
 df3 <- df2[df2$Year != 2020, ]
 # data split
 train <- df3[df3$Year < 2023, ]
 test <- df3[df3$Year >= 2023, ]
+```
+
+```{r warning = FALSE}
 run_linear_regression(train, test)
 ```
 
-Box-Cox transformation of the response variable
-> The Box-Cox transformation requires that all data be positive. If interval_miles includes zero or negative values, Box-Cox is not suitable without adjusting those values first.
+
+
+### Box-Cox transformation of the response variable
+> The Box-Cox transformation requires that all data be positive. If interval_gallons includes zero or negative values, Box-Cox is not suitable without adjusting those values first.
 ```{r warning = FALSE}
 # Perform Box-Cox transformation
-bc <- boxcox(lm(interval_miles ~ overall_miles_lag + interval_gallons_lag + interval_miles_lag + Year + Month + day_of_week, data = train))
+bc <- boxcox(lm(interval_gallons ~ interval_gallons_lag + log(interval_miles_lag) + Month, data = train))
 # Find the lambda that maximizes the log-likelihood
 lambda <- bc$x[which.max(bc$y)]
-# Apply the Box-Cox transformation to the interval_miles variable and overwirtes the original variable
-train$interval_miles <- (train$interval_miles^lambda - 1) / lambda
-test$interval_miles <- (test$interval_miles^lambda - 1) / lambda
+# Apply the Box-Cox transformation to the interval_gallons variable and overwirtes the original variable
+train$interval_gallons <- (train$interval_gallons^lambda - 1) / lambda
+test$interval_gallons <- (test$interval_gallons^lambda - 1) / lambda
 # Run the model with the transformed variable
 run_linear_regression(train, test)
 
 ```
 
-
-Since the model after a Box-Cox transformation of the response variable did not improve the model, I finally decided to check the correlation between the explanatory variables and the response variable to see if there is a multicollinearity problem.
+### Stepwise model selection
 ```{r warning = FALSE}
-# https://tinyurl.com/2y644l4w
-# Consider checking scatterplots of the explanatory variables against the response variable to see if there are apparent non-linear patterns that are not being modeled.
-explanatory_vars <- c('overall_miles_lag', 'interval_gallons_lag', 'interval_miles_lag', 'Year', 'Month', 'day_of_week')
+null_model <- lm(interval_gallons ~ 1, data = train)
+full_model <- lm(interval_gallons ~ interval_gallons_lag * log(interval_miles_lag) * Month, data = train)
 
-for (var in explanatory_vars) {
-  p <- ggplot(train, aes(x = !!sym(var), y = interval_miles)) +
-    geom_point() +
-    geom_smooth(method = 'loess', formula = y ~ x) + # Explicitly state the formula
-    labs(title = paste("Scatterplot of interval_miles vs", var),
-         x = var,
-         y = 'interval_miles') +
-    theme_minimal()
-  print(p)
-}
+both_stepwise_model <- step(null_model, scope = list(lower = null_model, upper = full_model), direction = "both")
+```
+
+Thinking about the fact that the data size is small and we do not have to pay attention to the prediction, I will use the whole dataset.
+```{r warning = FALSE}
+bc <- boxcox(lm(interval_gallons ~ interval_gallons_lag + log(interval_miles_lag) + Month, data = df3))
+# Find the lambda that maximizes the log-likelihood
+lambda <- bc$x[which.max(bc$y)]
+# Apply the Box-Cox transformation to the interval_gallons variable and overwirtes the original variable
+df3$interval_gallons_bc <- (df3$interval_gallons^lambda - 1) / lambda
+
+set.seed(49)
+model <- lm(interval_gallons_bc ~ interval_gallons_lag + log(interval_miles_lag) + Month, data = df3)
+
+print(summary(model))
+
+# Normality check
+residuals <- residuals(model)
+shapiro_test <- shapiro.test(residuals)
+print(paste('Shapiro-Wilk normality test p-value: ', shapiro_test$p.value))
+
+# Residual plot
+plot(fitted(model), residuals(model))
+
+# Q-Q plot
+qqnorm(resid(model))
+qqline(resid(model), col = "red")
+
+```
+
+### Stepwise model selection with full dataset
+> This model below becomes the best wrt AIC
+> interval_gallons_bc ~ interval_gallons_lag + log(interval_miles_lag)
+```{r warning = FALSE}
+null_model <- lm(interval_gallons_bc ~ 1, data = df3)
+full_model <- lm(interval_gallons_bc ~ interval_gallons_lag * log(interval_miles_lag) * Month, data = df3)
+
+both_stepwise_model <- step(null_model, scope = list(lower = null_model, upper = full_model), direction = "both")
+```
+
+### Assumption Check
+
+Linearity and Homoscedasticity Check 
+```{r warning = FALSE}
+plot(both_stepwise_model, which = 1)
+title(main = "Linearity and Homoscedasticity Check (Residuals vs Fittetd Values)",cex.main = 1.5, cex.lab = 1.2, cex.axis = 1.1)
+```
+
+Normality Check
+```{r warning = FALSE}
+hist(resid(both_stepwise_model))  # Histogram of residuals can be used to check whether the variance is normally distributed
+qqnorm(resid(both_stepwise_model))  # QQ plot
+qqline(resid(both_stepwise_model))  # Adds a line to the QQ plot
+```
+
+Independence: Autocorrelation Check
+```{r warning = FALSE}
+acf(resid(both_stepwise_model))
+```
+
+Multicollinearity Check
+```{r warning = FALSE}
+library("car")
+vif(both_stepwise_model) # Calculates VIF for each predictor
+
 ```
 
