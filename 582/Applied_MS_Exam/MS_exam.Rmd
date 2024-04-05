@@ -15,14 +15,17 @@ library("ggplot2")
 library("psych")
 library("MASS")
 library("psych")
+library("writexl")
 ```
 
 ```{r warning = FALSE}
 # path setup
 current_note_path <- getwd()
-main_path <- file.path(current_note_path, "statistical-analysis/582/Applied_MS_Exam/")
+main_path <- file.path(current_note_path, "/582/Applied_MS_Exam")
 df <- read_csv(file.path(main_path, "data/Prius_Prime_v2.csv"))
 head(df)
+View(df)
+write_xlsx(df, file.path(main_path, "data/Prius_Prime_v2.xlsx"))
 ```
 
 ```{r warning = FALSE}
