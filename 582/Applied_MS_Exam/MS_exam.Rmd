@@ -208,6 +208,9 @@ both1 <- step(intercept_only1, direction='both', scope = list(lower = intercept_
 summary(both1)
 both1$anova
 both1$coefficients
+# Q-Q plot
+qqnorm(resid(both1))
+qqline(resid(both1), col = "red")
 ```
 
 
