@@ -1,19 +1,16 @@
-
-setwd("C:/Users/weilu/OneDrive - purdue.edu/Desktop/Sampling")
 # Load the survey package
-install.packages('survey')
-library(survey)
-install.packages('sampling')
-library(sampling)
+library("survey")
+library("sampling")
 
 # [reference](https://stats.oarc.ucla.edu/r/seminars/survey-data-analysis-with-r/)
 
 #Importing the data
-shapespop <-read.csv("/Users/satoshiido/Documents/programming/statistical-analysis/522/hw3/shapespop.csv", header=T)
+current_dir <- getwd()
+shapespop <- read.csv(file.path(current_dir, "/hw/hw3/shapespop.csv"), header = TRUE)
 
 #check the actual population total and mean as we will use samples to estimate these values
-sum (shapespop$area)
-mean (shapespop$area)
+sum(shapespop$area)
+mean(shapespop$area)
 
 # population quantity of gray objects or circles, which we use for comparison with the sample estimates
 table(shapespop$color)
@@ -25,7 +22,7 @@ table(shapespop$shape)
 
 
 # Set seed for reproducibility
-set.seed(84569)
+set.seed(49)
 
 # Part (a):
 # Select an SRS of size 200
@@ -44,8 +41,8 @@ samp$sampwt <- rep(20000/n,n)
 str(samp)
 
 # Save the sample for later exercises
-write.table(file="/Users/satoshiido/Documents/programming/statistical-analysis/522/hw3/samp.csv", samp, sep = ",", row.names = F)
-
+file.path(current_dir, "/hw/hw3/shapespop.csv")
+write.table(file=file.path(current_dir, "/hw/hw3/samp.csv"), samp, sep = ",", row.names = F)
 
 
 # Part (b)
@@ -109,7 +106,7 @@ print(gray_total)
 confint(gray_total, df=199)
 
 # population quantity of gray objects
-table(df$team)
+table(shapespop$color)
 
 
 # Part(e)
@@ -123,7 +120,8 @@ circle_total <- svytotal(~shape, design = shape_count)
 print(circle_total)
 confint(circle_total, df=199)
 
-
+# Check the population
+table(shapespop$shape)
 
 
 ##################################Manual Computation#################################
