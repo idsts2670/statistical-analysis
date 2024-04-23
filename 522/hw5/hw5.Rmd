@@ -72,9 +72,10 @@ data import
 ```{r warning=FALSE, message=FALSE}
 # You can read SAS file directly using the haven package.
 shapedata <- read_csv("shapespop")
+View(shapedata)
 ```
 
-## SRS
+## SRS (the same as the one used in Homework 3)
 ```{r warning=FALSE, message=FALSE, include=TRUE}
 # SRS (the same as the one used in Homework 3)
 # Set seed
@@ -263,13 +264,13 @@ STR2_logsal_mean <- svymean(~logsal, design = STR2_sample)
 print(STR2_logsal_mean)
 confint(STR2_logsal_mean, df = 120)
 
+# question (e)
 # To answer the last question about optimal allocation, we need to look at the variance of each stratum
 grp <- group_by(baseballdata, team)
 var_team <- summarise(grp, mean = mean(logsal), var = var(logsal), sd = sd(logsal))
 print(var_team, n = 30)
 
 # This will generate the boxplot like SAS does
-install.packages("ggplot2")
 library(ggplot2)
 ggplot(baseballdata, aes(x = team, y = logsal, fill=team))+
   stat_boxplot(geom = "errorbar", width = 0.25) + 
